@@ -31,7 +31,7 @@ public class WorkspaceController {
         return R.ok(workspaceService.list(
                 new LambdaQueryWrapper<Workspace>()
                         .eq(Workspace::getTenantId, tenantId)
-                        .eq(Workspace::getDeleted, 0)
+                        .eq(Workspace::getDeleted, false)
                         .orderByDesc(Workspace::getCreatedAt)
         ));
     }
@@ -46,7 +46,7 @@ public class WorkspaceController {
         return R.ok(workspaceService.page(page,
                 new LambdaQueryWrapper<Workspace>()
                         .eq(Workspace::getTenantId, tenantId)
-                        .eq(Workspace::getDeleted, 0)
+                        .eq(Workspace::getDeleted, false)
                         .orderByDesc(Workspace::getCreatedAt)
         ));
     }

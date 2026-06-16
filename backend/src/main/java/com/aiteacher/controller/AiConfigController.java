@@ -21,7 +21,7 @@ public class AiConfigController {
     public R<List<AiConfig>> list() {
         List<AiConfig> configs = aiConfigService.list(
                 new LambdaQueryWrapper<AiConfig>()
-                        .eq(AiConfig::getDeleted, 0)
+                        .eq(AiConfig::getDeleted, false)
                         .orderByDesc(AiConfig::getPriority)
         );
         return R.ok(configs);
@@ -34,7 +34,7 @@ public class AiConfigController {
         Page<AiConfig> page = new Page<>(pageNum, pageSize);
         Page<AiConfig> result = aiConfigService.page(page,
                 new LambdaQueryWrapper<AiConfig>()
-                        .eq(AiConfig::getDeleted, 0)
+                        .eq(AiConfig::getDeleted, false)
                         .orderByDesc(AiConfig::getPriority)
         );
         return R.ok(result);

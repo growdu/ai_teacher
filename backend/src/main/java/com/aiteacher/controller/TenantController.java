@@ -26,7 +26,7 @@ public class TenantController {
     public R<List<Tenant>> list() {
         return R.ok(tenantService.list(
                 new LambdaQueryWrapper<Tenant>()
-                        .eq(Tenant::getDeleted, 0)
+                        .eq(Tenant::getDeleted, false)
                         .orderByDesc(Tenant::getCreatedAt)
         ));
     }
@@ -38,7 +38,7 @@ public class TenantController {
         Page<Tenant> page = new Page<>(pageNum, pageSize);
         return R.ok(tenantService.page(page,
                 new LambdaQueryWrapper<Tenant>()
-                        .eq(Tenant::getDeleted, 0)
+                        .eq(Tenant::getDeleted, false)
                         .orderByDesc(Tenant::getCreatedAt)
         ));
     }
