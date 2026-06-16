@@ -16,7 +16,12 @@ const Login = () => {
     try {
       const res = await request.post<any, LoginResponse>('/auth/login', values)
       setToken(res.token)
-      setUser(res.user)
+      setUser({
+        id: res.userId,
+        username: res.username,
+        email: '',
+        avatar: ''
+      })
       message.success('登录成功')
       navigate('/')
     } catch (error) {

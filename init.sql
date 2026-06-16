@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(128),
     role VARCHAR(32) DEFAULT 'teacher',
     enabled BOOLEAN DEFAULT TRUE,
+    deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -33,7 +34,9 @@ CREATE TABLE IF NOT EXISTS workspace (
     tenant_id BIGINT NOT NULL,
     name VARCHAR(128) NOT NULL,
     settings JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT NOW()
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- 知识点表
@@ -45,6 +48,7 @@ CREATE TABLE IF NOT EXISTS knowledge_point (
     grade VARCHAR(32),
     content TEXT NOT NULL,
     tags VARCHAR(255),
+    deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -60,6 +64,7 @@ CREATE TABLE IF NOT EXISTS course (
     script TEXT,
     status VARCHAR(32) DEFAULT 'draft',
     creator_id BIGINT,
+    deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -77,6 +82,7 @@ CREATE TABLE IF NOT EXISTS teaching_material (
     duration INT,
     file_size BIGINT,
     status VARCHAR(32) DEFAULT 'generated',
+    deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -92,6 +98,42 @@ CREATE TABLE IF NOT EXISTS ai_config (
     model VARCHAR(128),
     enabled BOOLEAN DEFAULT TRUE,
     priority INT DEFAULT 0,
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 异步任务表
+CREATE TABLE IF NOT EXISTS async_task (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id BIGINT,
+    user_id BIGINT,
+    task_type VARCHAR(32),
+    task_name VARCHAR(128),
+    status VARCHAR(32) DEFAULT 'pending',
+    progress INT DEFAULT 0,
+    current_step VARCHAR(128),
+    result TEXT,
+    error_message TEXT,
+    context TEXT,
+    deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    completed_at TIMESTAMP
+);
+
+-- 资源表
+CREATE TABLE IF NOT EXISTS resource (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id BIGINT NOT NULL,
+    workspace_id BIGINT,
+    user_id BIGINT,
+    resource_name VARCHAR(255) NOT NULL,
+    resource_type VARCHAR(32),
+    file_url VARCHAR(512),
+    file_size BIGINT,
+    mime_type VARCHAR(128),
+    deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Outlet, Menu, Layout, Avatar, Dropdown, Button } from 'antd'
-import { UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { Outlet, Menu, Avatar, Dropdown, Button } from 'antd'
+import { UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, HomeOutlined, BookOutlined, ExperimentOutlined, FolderOutlined, SettingOutlined } from '@ant-design/icons'
+import type { MenuProps } from 'antd'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useUserStore } from '@/store/userStore'
 
 const { Header, Sider, Content } = Layout
@@ -9,28 +10,38 @@ const { Header, Sider, Content } = Layout
 const Layout = () => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useUserStore()
 
-  const menuItems = [
+  const menuItems: MenuProps['items'] = [
     {
       key: '/',
+      icon: <HomeOutlined />,
       label: '首页',
     },
     {
-      key: '/students',
-      label: '学生管理',
+      key: '/knowledge',
+      icon: <ExperimentOutlined />,
+      label: '知识点',
     },
     {
       key: '/courses',
+      icon: <BookOutlined />,
       label: '课程管理',
     },
     {
-      key: '/analytics',
-      label: '数据分析',
+      key: '/materials',
+      icon: <FolderOutlined />,
+      label: '教材中心',
+    },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: '设置',
     },
   ]
 
-  const userMenu = {
+  const userMenu: MenuProps['menu'] = {
     items: [
       {
         key: 'logout',
@@ -39,17 +50,16 @@ const Layout = () => {
         danger: true,
       },
     ],
+    onClick: ({ key }) => {
+      if (key === 'logout') {
+        logout()
+        navigate('/login')
+      }
+    },
   }
 
-  const handleMenuClick = (key: string) => {
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     navigate(key)
-  }
-
-  const handleUserMenuClick = ({ key }: { key: string }) => {
-    if (key === 'logout') {
-      logout()
-      navigate('/login')
-    }
   }
 
   return (
@@ -61,9 +71,9 @@ const Layout = () => {
         <Menu
           theme="dark"
           mode="inline"
-          defaultSelectedKeys={['/']}
+          selectedKeys={[location.pathname]}
           items={menuItems}
-          onClick={({ key }) => handleMenuClick(key)}
+          onClick={handleMenuClick}
         />
       </Sider>
       <Layout>
@@ -73,14 +83,14 @@ const Layout = () => {
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
           />
-          <Dropdown menu={userMenu} onClick={handleUserMenuClick}>
+          <Dropdown menu={userMenu}>
             <div className="flex items-center cursor-pointer">
               <Avatar icon={<UserOutlined />} src={user?.avatar} />
               <span className="ml-2">{user?.username || '用户'}</span>
             </div>
           </Dropdown>
         </Header>
-        <Content className="bg-gray-50">
+        <Content className="bg-gray-50 p-6">
           <Outlet />
         </Content>
       </Layout>

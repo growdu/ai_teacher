@@ -1,19 +1,32 @@
 package com.aiteacher.entity;
 
-import com.aiteacher.common.BaseEntity;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+import java.time.LocalDateTime;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 @TableName("users")
-public class User extends BaseEntity {
-
+public class User {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    
     private Long tenantId;
+    
     private String username;
+    
     private String password;
+    
     private String email;
+    
     private String role;
+    
     private Boolean enabled;
+    
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+    
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+    
+    private Integer deleted;
 }

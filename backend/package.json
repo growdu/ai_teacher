@@ -1,0 +1,12 @@
+{
+  "name": "ai-teacher-ppt-generator",
+  "version": "1.0.0",
+  "description": "PPT generation scripts for AI Teacher Studio",
+  "main": "index.js",
+  "scripts": {
+    "generate-ppt": "node scripts/generate-ppt.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}

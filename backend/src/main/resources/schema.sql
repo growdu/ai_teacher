@@ -1,6 +1,7 @@
 -- AI Teacher Studio Database Schema
 
 -- Drop tables if exist (in reverse order of dependencies)
+DROP TABLE IF EXISTS async_task CASCADE;
 DROP TABLE IF EXISTS teaching_material CASCADE;
 DROP TABLE IF EXISTS course CASCADE;
 DROP TABLE IF EXISTS knowledge_point CASCADE;
@@ -121,6 +122,24 @@ CREATE TABLE ai_config (
     CONSTRAINT fk_ai_config_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id)
 );
 
+-- 异步任务表
+CREATE TABLE async_task (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id BIGINT,
+    user_id BIGINT,
+    task_type VARCHAR(32),
+    task_name VARCHAR(128),
+    status VARCHAR(32) DEFAULT 'pending',
+    progress INT DEFAULT 0,
+    current_step VARCHAR(128),
+    result TEXT,
+    error_message TEXT,
+    context TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    completed_at TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX idx_users_tenant_id ON users(tenant_id);
 CREATE INDEX idx_users_username ON users(username);
@@ -133,3 +152,5 @@ CREATE INDEX idx_course_knowledge_point_id ON course(knowledge_point_id);
 CREATE INDEX idx_teaching_material_tenant_id ON teaching_material(tenant_id);
 CREATE INDEX idx_teaching_material_course_id ON teaching_material(course_id);
 CREATE INDEX idx_ai_config_tenant_id ON ai_config(tenant_id);
+CREATE INDEX idx_async_task_user_id ON async_task(user_id);
+CREATE INDEX idx_async_task_status ON async_task(status);

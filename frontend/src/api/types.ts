@@ -5,12 +5,9 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string
-  user: {
-    id: number
-    username: string
-    email: string
-    avatar?: string
-  }
+  username: string
+  role: string
+  userId: number
 }
 
 export interface ApiResponse<T = any> {

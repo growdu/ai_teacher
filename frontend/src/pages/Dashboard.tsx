@@ -1,83 +1,152 @@
-import { Card, Row, Col, Statistic, Table, Tag } from 'antd'
-import { UserOutlined, BookOutlined, TeamOutlined, RiseOutlined } from '@ant-design/icons'
+import { useState, useEffect } from 'react'
+import { Card, Row, Col, Statistic, Table, Tag, List, Avatar, Button, Space } from 'antd'
+import { UserOutlined, BookOutlined, FolderOutlined, RiseOutlined, PlayCircleOutlined, FileTextOutlined } from '@ant-design/icons'
+import { request } from '@/api/request'
+import { useNavigate } from 'react-router-dom'
 
 const Dashboard = () => {
-  const columns = [
+  const navigate = useNavigate()
+  const [stats, setStats] = useState({
+    courseCount: 0,
+    knowledgeCount: 0,
+    materialCount: 0,
+    activeTaskCount: 0,
+  })
+  const [recentCourses, setRecentCourses] = useState<any[]>([])
+  const [recentMaterials, setRecentMaterials] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  const loadDashboardData = async () => {
+    setLoading(true)
+    try {
+      // Load courses
+      const courseRes = await request.get('/course/list')
+      const courses = courseRes.data || []
+      setRecentCourses(courses.slice(0, 5))
+      setStats(prev => ({ ...prev, courseCount: courses.length }))
+
+      // Load knowledge points
+      const knowledgeRes = await request.get('/knowledge-point/list')
+      setStats(prev => ({ ...prev, knowledgeCount: knowledgeRes.data?.length || 0 }))
+
+      // Load materials
+      const materialRes = await request.get('/material/list')
+      const materials = materialRes.data || []
+      setRecentMaterials(materials.slice(0, 5))
+      setStats(prev => ({ ...prev, materialCount: materials.length }))
+
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const courseColumns = [
     {
-      title: '学生姓名',
-      dataIndex: 'name',
-      key: 'name',
+      title: '课程标题',
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string) => <a onClick={() => navigate('/courses')}>{title || '未命名课程'}</a>,
     },
     {
-      title: '学习课程',
-      dataIndex: 'course',
-      key: 'course',
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => {
+        const config: Record<string, { color: string; label: string }> = {
+          draft: { color: 'default', label: '草稿' },
+          generating: { color: 'processing', label: '生成中' },
+          generated: { color: 'success', label: '已生成' },
+          failed: { color: 'error', label: '失败' },
+        }
+        const c = config[status] || { color: 'default', label: status }
+        return <Tag color={c.color}>{c.label}</Tag>
+      },
     },
     {
-      title: '学习进度',
-      dataIndex: 'progress',
-      key: 'progress',
-      render: (progress: number) => (
-        <Tag color={progress >= 80 ? 'green' : progress >= 50 ? 'blue' : 'orange'}>
-          {progress}%
-        </Tag>
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+    },
+  ]
+
+  const materialColumns = [
+    {
+      title: '标题',
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string, record: any) => (
+        <Space>
+          {record.materialType === 'ppt' ? <FileTextOutlined style={{ color: 'orange' }} /> : <PlayCircleOutlined style={{ color: 'blue' }} />}
+          <span>{title || '未命名教材'}</span>
+        </Space>
       ),
+    },
+    {
+      title: '类型',
+      dataIndex: 'materialType',
+      key: 'materialType',
+      render: (type: string) => <Tag color={type === 'ppt' ? 'orange' : 'blue'}>{type?.toUpperCase()}</Tag>,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === '学习中' ? 'processing' : 'default'}>
-          {status}
-        </Tag>
+        <Tag color={status === 'generated' ? 'success' : 'processing'}>{status}</Tag>
       ),
     },
-  ]
-
-  const data = [
-    { key: '1', name: '张三', course: 'Python基础', progress: 85, status: '学习中' },
-    { key: '2', name: '李四', course: '机器学习', progress: 60, status: '学习中' },
-    { key: '3', name: '王五', course: '深度学习', progress: 30, status: '已暂停' },
-    { key: '4', name: '赵六', course: 'Python基础', progress: 92, status: '已完成' },
   ]
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">仪表盘</h1>
+
       <Row gutter={16} className="mb-6">
         <Col span={6}>
-          <Card>
-            <Statistic
-              title="学生总数"
-              value={1258}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
+          <Card loading={loading}>
             <Statistic
               title="课程总数"
-              value={42}
+              value={stats.courseCount}
               prefix={<BookOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: '#1890ff' }}
+              onClick={() => navigate('/courses')}
+              className="cursor-pointer"
             />
           </Card>
         </Col>
         <Col span={6}>
-          <Card>
+          <Card loading={loading}>
             <Statistic
-              title="活跃学习"
-              value={856}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              title="知识点总数"
+              value={stats.knowledgeCount}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#52c41a' }}
+              onClick={() => navigate('/knowledge')}
+              className="cursor-pointer"
             />
           </Card>
         </Col>
         <Col span={6}>
-          <Card>
+          <Card loading={loading}>
+            <Statistic
+              title="教材总数"
+              value={stats.materialCount}
+              prefix={<FolderOutlined />}
+              valueStyle={{ color: '#722ed1' }}
+              onClick={() => navigate('/materials')}
+              className="cursor-pointer"
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card loading={loading}>
             <Statistic
               title="学习增长率"
               value={12.5}
@@ -88,13 +157,55 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
-      <Card title="最近学习情况">
-        <Table
-          columns={columns}
-          dataSource={data}
-          pagination={false}
-        />
-      </Card>
+
+      <Row gutter={16}>
+        <Col span={12}>
+          <Card
+            title="最近课程"
+            extra={<Button type="link" onClick={() => navigate('/courses')}>查看更多</Button>}
+          >
+            <Table
+              columns={courseColumns}
+              dataSource={recentCourses}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card
+            title="最近教材"
+            extra={<Button type="link" onClick={() => navigate('/materials')}>查看更多</Button>}
+          >
+            <Table
+              columns={materialColumns}
+              dataSource={recentMaterials}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={16} className="mt-6">
+        <Col span={24}>
+          <Card title="快速开始">
+            <Space size="large">
+              <Button type="primary" size="large" onClick={() => navigate('/knowledge')}>
+                添加知识点
+              </Button>
+              <Button size="large" onClick={() => navigate('/courses')}>
+                创建课程
+              </Button>
+              <Button size="large" onClick={() => navigate('/settings')}>
+                配置AI
+              </Button>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
     </div>
   )
 }

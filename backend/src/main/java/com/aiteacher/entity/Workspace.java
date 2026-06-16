@@ -1,16 +1,28 @@
 package com.aiteacher.entity;
 
-import com.aiteacher.common.BaseEntity;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+import java.time.LocalDateTime;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 @TableName("workspace")
-public class Workspace extends BaseEntity {
-
+public class Workspace {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    
     private Long tenantId;
+    
     private String name;
-    private String settings;
+    
+    private String description;
+    
+    private String settings; // JSON
+    
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+    
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+    
+    private Integer deleted;
 }

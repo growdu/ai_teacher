@@ -24,7 +24,13 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response: AxiosResponse) => {
-    return response.data
+    const res = response.data
+    if (res.code === 200) {
+      return res.data
+    } else {
+      message.error(res.message || '请求失败')
+      return Promise.reject(new Error(res.message || '请求失败'))
+    }
   },
   (error: AxiosError) => {
     if (error.response) {
