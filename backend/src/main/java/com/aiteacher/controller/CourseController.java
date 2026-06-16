@@ -90,7 +90,7 @@ public class CourseController {
     public R<Boolean> delete(@PathVariable Long id) {
         Course course = new Course();
         course.setId(id);
-        course.setDeleted(1);
+        course.setDeleted(true);
         return R.ok(courseGenerateService.updateById(course));
     }
 

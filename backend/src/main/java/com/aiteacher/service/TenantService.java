@@ -20,7 +20,7 @@ public class TenantService {
 
     public Tenant create(Tenant tenant) {
         tenant.setCreatedAt(LocalDateTime.now());
-        tenant.setDeleted(0);
+        tenant.setDeleted(false);
         tenantMapper.insert(tenant);
         return tenant;
     }

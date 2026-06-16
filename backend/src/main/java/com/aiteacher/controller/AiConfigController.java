@@ -55,7 +55,7 @@ public class AiConfigController {
     public R<Boolean> delete(@PathVariable Long id) {
         AiConfig config = new AiConfig();
         config.setId(id);
-        config.setDeleted(1);
+        config.setDeleted(true);
         return R.ok(aiConfigService.updateById(config));
     }
 

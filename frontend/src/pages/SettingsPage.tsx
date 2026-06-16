@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Tabs, Card, Table, Button, Tag, Space, Modal, Form, Input, Switch, Select, message, Popconfirm } from 'antd'
 import { PlusOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
-import { request } from '@/api/request'
+import request from '@/api/request'
 
 interface AiConfig {
   id: number

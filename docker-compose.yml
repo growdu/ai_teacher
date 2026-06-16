@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgresql:16
+    image: postgres:16
     container_name: ai-teacher-postgres
     ports:
       - "5432:5432"
@@ -52,9 +52,7 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ai-teacher-backend:local
     container_name: ai-teacher-backend
     ports:
       - "8080:8080"
@@ -69,6 +67,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
     depends_on:
       postgres:
         condition: service_healthy

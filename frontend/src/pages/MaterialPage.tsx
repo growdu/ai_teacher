@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Table, Button, Tag, Space, message, Card, Row, Col, Statistic, Modal, Form, Input, Select, Upload, Progress } from 'antd'
 import { DownloadOutlined, DeleteOutlined, PlusOutlined, FileOutlined, VideoCameraOutlined, FilePdfOutlined } from '@ant-design/icons'
-import { request } from '@/api/request'
+import request from '@/api/request'
 
 interface Material {
   id: number

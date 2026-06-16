@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
-import { request } from '@/api/request'
+import request from '@/api/request'
 
 const { TextArea } = Input
 

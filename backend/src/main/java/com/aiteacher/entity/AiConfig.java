@@ -32,5 +32,5 @@ public class AiConfig {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
     
-    private Integer deleted;
+    private Boolean deleted;
 }

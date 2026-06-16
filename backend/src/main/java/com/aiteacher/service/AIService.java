@@ -1,5 +1,6 @@
 package com.aiteacher.service;
 
+import com.aiteacher.provider.AIProviderRegistry;
 import com.aiteacher.provider.llm.LLMProvider;
 import com.aiteacher.provider.tts.TTSProvider;
 import com.aiteacher.provider.ai.ChatRequest;

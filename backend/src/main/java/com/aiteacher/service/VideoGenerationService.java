@@ -18,6 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Video Generation Service - generates video from course
@@ -235,19 +238,8 @@ public class VideoGenerationService {
     private String uploadVideo(String videoPath) {
         try {
             File videoFile = new File(videoPath);
-            MultipartFile multipartFile = new org.springframework.web.multipart.commons.CommonsMultipartFile(
-                    new org.apache.commons.fileupload.disk.DiskFileItem(
-                            "file",
-                            "video/mp4",
-                            false,
-                            videoFile.getName(),
-                            (int) videoFile.length(),
-                            videoFile.getParentFile()
-                    )
-            );
-            
             String objectName = "video/" + UUID.randomUUID().toString() + ".mp4";
-            fileStorageService.uploadFile(multipartFile, "video");
+            fileStorageService.uploadFile(videoFile, "video", videoFile.getName());
             
             return fileStorageService.getFileUrl(objectName);
         } catch (Exception e) {

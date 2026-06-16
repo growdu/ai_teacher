@@ -7,6 +7,7 @@ import com.aiteacher.provider.llm.*;
 import com.aiteacher.provider.tts.AliyunTTSProvider;
 import com.aiteacher.provider.tts.TTSProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -152,4 +153,64 @@ public class AIConfigService {
         initDefaultProviders();
         initDatabaseProviders();
     }
+
+    /**
+     * List AI configs
+     */
+    public List<AiConfig> list(LambdaQueryWrapper<AiConfig> wrapper) {
+        return aiConfigMapper.selectList(wrapper);
+    }
+
+    /**
+     * Page query AI configs
+     */
+    public Page<AiConfig> page(Page<AiConfig> page, LambdaQueryWrapper<AiConfig> wrapper) {
+        return aiConfigMapper.selectPage(page, wrapper);
+    }
+
+    /**
+     * Save AI config
+     */
+    public boolean save(AiConfig aiConfig) {
+        return aiConfigMapper.insert(aiConfig) > 0;
+    }
+
+    /**
+     * Update AI config
+     */
+    public boolean updateById(AiConfig aiConfig) {
+        return aiConfigMapper.updateById(aiConfig) > 0;
+    }
+
+    /**
+     * Get best LLM provider name
+     */
+    public String getBestLLMProviderName() {
+        LLMProvider provider = providerRegistry.getBestLLMProvider();
+        return provider != null ? provider.getProviderType().name() : null;
+    }
+
+
+    /**
+     * Get best TTS provider name
+     */
+    public String getBestTTSProviderName() {
+        TTSProvider provider = providerRegistry.getBestTTSProvider();
+        return provider != null ? provider.getProviderType().name() : null;
+    }
+
+    /**
+     * Check if LLM is available
+     */
+    public boolean isLLMAvailable() {
+        return providerRegistry.getBestLLMProvider() != null;
+    }
+
+    /**
+     * Check if TTS is available
+     */
+    public boolean isTTSAvailable() {
+        return providerRegistry.getBestTTSProvider() != null;
+    }
+
 }

@@ -20,7 +20,7 @@ public class WorkspaceService {
 
     public Workspace create(Workspace workspace) {
         workspace.setCreatedAt(LocalDateTime.now());
-        workspace.setDeleted(0);
+        workspace.setDeleted(false);
         workspaceMapper.insert(workspace);
         return workspace;
     }
@@ -45,7 +45,7 @@ public class WorkspaceService {
     public boolean delete(Long id) {
         Workspace workspace = new Workspace();
         workspace.setId(id);
-        workspace.setDeleted(1);
+        workspace.setDeleted(true);
         return workspaceMapper.updateById(workspace) > 0;
     }
 }

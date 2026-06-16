@@ -1,0 +1,26 @@
+# Maven
+*/target/
+target/
+*.jar
+*.jar.original
+
+# Node
+*/node_modules/
+node_modules/
+*/dist/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid

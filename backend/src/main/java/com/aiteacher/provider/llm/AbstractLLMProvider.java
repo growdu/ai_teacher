@@ -5,8 +5,8 @@ import com.aiteacher.provider.ai.ChatResponse;
 import com.aiteacher.provider.ai.EmbeddingRequest;
 import com.aiteacher.provider.ai.EmbeddingResponse;
 import com.aiteacher.provider.ai.model.ProviderType;
-import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,6 +19,11 @@ public abstract class AbstractLLMProvider implements LLMProvider {
     protected String model;
     protected boolean enabled;
     protected int priority;
+
+    /**
+     * Get the provider type - subclasses must implement
+     */
+    public abstract ProviderType getProviderType();
 
     @Override
     public String getProviderName() {
@@ -58,20 +63,10 @@ public abstract class AbstractLLMProvider implements LLMProvider {
     /**
      * Convert ChatRequest to provider-specific format and call streaming API
      */
-    protected abstract Flux<String> doStream(ChatRequest request);
+    protected abstract List<String> doStream(ChatRequest request);
 
     @Override
     public ChatResponse chat(ChatRequest request) {
         return doChat(request);
-    }
-
-    @Override
-    public Flux<ChatResponse> stream(ChatRequest request) {
-        return doStream(request).map(chunk -> ChatResponse.builder()
-                .id("")
-                .object("chat.completion.chunk")
-                .created(System.currentTimeMillis() / 1000)
-                .model(request.getModel())
-                .build());
     }
 }

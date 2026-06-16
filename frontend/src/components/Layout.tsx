@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Outlet, Menu, Avatar, Dropdown, Button } from 'antd'
+import { Layout, Menu, Avatar, Dropdown } from 'antd'
 import { UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, HomeOutlined, BookOutlined, ExperimentOutlined, FolderOutlined, SettingOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useUserStore } from '@/store/userStore'
 
 const { Header, Sider, Content } = Layout
 
-const Layout = () => {
+const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -41,7 +41,7 @@ const Layout = () => {
     },
   ]
 
-  const userMenu: MenuProps['menu'] = {
+  const userMenu = {
     items: [
       {
         key: 'logout',
@@ -50,7 +50,7 @@ const Layout = () => {
         danger: true,
       },
     ],
-    onClick: ({ key }) => {
+    onClick: ({ key }: { key: string }) => {
       if (key === 'logout') {
         logout()
         navigate('/login')
@@ -58,7 +58,7 @@ const Layout = () => {
     },
   }
 
-  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+  const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key)
   }
 
@@ -77,20 +77,22 @@ const Layout = () => {
         />
       </Sider>
       <Layout>
-        <Header className="bg-white px-4 flex items-center justify-between">
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-          />
-          <Dropdown menu={userMenu}>
-            <div className="flex items-center cursor-pointer">
-              <Avatar icon={<UserOutlined />} src={user?.avatar} />
-              <span className="ml-2">{user?.username || '用户'}</span>
-            </div>
-          </Dropdown>
+        <Header className="bg-white px-4 flex items-center justify-between shadow">
+          <div className="flex items-center">
+            {collapsed ? (
+              <MenuUnfoldOutlined className="text-xl cursor-pointer" onClick={() => setCollapsed(!collapsed)} />
+            ) : (
+              <MenuFoldOutlined className="text-xl cursor-pointer" onClick={() => setCollapsed(!collapsed)} />
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <Dropdown menu={userMenu as MenuProps} placement="bottomRight">
+              <Avatar icon={<UserOutlined />} className="cursor-pointer" />
+            </Dropdown>
+            <span className="font-medium">{user?.username || '用户'}</span>
+          </div>
         </Header>
-        <Content className="bg-gray-50 p-6">
+        <Content className="p-6">
           <Outlet />
         </Content>
       </Layout>
@@ -98,4 +100,4 @@ const Layout = () => {
   )
 }
 
-export default Layout
+export default AppLayout

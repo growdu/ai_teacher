@@ -1,12 +1,13 @@
 package com.aiteacher.service;
 
 import io.minio.*;
-import io.minio.http.ContentType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.UUID;
 
@@ -101,4 +102,32 @@ public class FileStorageService {
             throw new RuntimeException("Failed to get file URL", e);
         }
     }
+
+    /**
+     * Upload a File to storage
+     */
+    public String uploadFile(File file, String folder, String originalFilename) {
+        try {
+            initBucket();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String objectName = folder + "/" + UUID.randomUUID().toString() + extension;
+
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .stream(new FileInputStream(file), file.length(), -1)
+                            .contentType("application/octet-stream")
+                            .build()
+            );
+
+            return objectName;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload file", e);
+        }
+    }
+
 }

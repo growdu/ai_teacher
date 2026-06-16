@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Row, Col, Statistic, Table, Tag, List, Avatar, Button, Space } from 'antd'
 import { UserOutlined, BookOutlined, FolderOutlined, RiseOutlined, PlayCircleOutlined, FileTextOutlined } from '@ant-design/icons'
-import { request } from '@/api/request'
+import request from '@/api/request'
 import { useNavigate } from 'react-router-dom'
 
 const Dashboard = () => {
@@ -116,8 +116,6 @@ const Dashboard = () => {
               value={stats.courseCount}
               prefix={<BookOutlined />}
               valueStyle={{ color: '#1890ff' }}
-              onClick={() => navigate('/courses')}
-              className="cursor-pointer"
             />
           </Card>
         </Col>
@@ -128,21 +126,19 @@ const Dashboard = () => {
               value={stats.knowledgeCount}
               prefix={<UserOutlined />}
               valueStyle={{ color: '#52c41a' }}
-              onClick={() => navigate('/knowledge')}
-              className="cursor-pointer"
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card loading={loading}>
-            <Statistic
-              title="教材总数"
-              value={stats.materialCount}
-              prefix={<FolderOutlined />}
-              valueStyle={{ color: '#722ed1' }}
-              onClick={() => navigate('/materials')}
-              className="cursor-pointer"
-            />
+            <div onClick={() => navigate('/materials')} className="cursor-pointer">
+              <Statistic
+                title="教材总数"
+                value={stats.materialCount}
+                prefix={<FolderOutlined />}
+                valueStyle={{ color: '#722ed1' }}
+              />
+            </div>
           </Card>
         </Col>
         <Col span={6}>

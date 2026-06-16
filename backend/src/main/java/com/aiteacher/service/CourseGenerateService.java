@@ -19,6 +19,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
 
 /**
  * Course Generation Service - generates course outlines and scripts using LLM
@@ -197,4 +200,34 @@ public class CourseGenerateService {
         courseMapper.insert(course);
         return course;
     }
+
+
+    /**
+     * List courses with query wrapper
+     */
+    public List<Course> list(LambdaQueryWrapper<Course> wrapper) {
+        return courseMapper.selectList(wrapper);
+    }
+
+    /**
+     * Get course by ID
+     */
+    public Course getById(Long id) {
+        return courseMapper.selectById(id);
+    }
+
+    /**
+     * Page query courses
+     */
+    public Page<Course> page(Page<Course> page, LambdaQueryWrapper<Course> wrapper) {
+        return courseMapper.selectPage(page, wrapper);
+    }
+
+    /**
+     * Update course
+     */
+    public boolean updateById(Course course) {
+        return courseMapper.updateById(course) > 0;
+    }
+
 }

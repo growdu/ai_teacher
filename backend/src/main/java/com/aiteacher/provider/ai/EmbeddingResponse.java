@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.List;
+import com.aiteacher.provider.ai.model.UsageInfo;
 
 /**
  * Embedding response model

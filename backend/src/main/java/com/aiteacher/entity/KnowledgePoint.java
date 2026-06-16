@@ -28,5 +28,5 @@ public class KnowledgePoint {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
     
-    private Integer deleted;
+    private Boolean deleted;
 }

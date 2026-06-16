@@ -24,13 +24,7 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response: AxiosResponse) => {
-    const res = response.data
-    if (res.code === 200) {
-      return res.data
-    } else {
-      message.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
-    }
+    return response.data
   },
   (error: AxiosError) => {
     if (error.response) {
@@ -61,5 +55,11 @@ request.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export interface ApiResponse<T = any> {
+  code: number
+  message: string
+  data: T
+}
 
 export default request

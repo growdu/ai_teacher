@@ -242,19 +242,7 @@ public class PptGenerationService {
     private String uploadPptFile(File file, String title) {
         try {
             String objectName = "ppt/" + System.currentTimeMillis() + ".pptx";
-            fileStorageService.uploadFile(
-                    new org.springframework.web.multipart.commons.CommonsMultipartFile(
-                            new org.apache.commons.fileupload.disk.DiskFileItem(
-                                    "file",
-                                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                                    false,
-                                    title + ".pptx",
-                                    (int) file.length(),
-                                    file.getParentFile()
-                            )
-                    ),
-                    "ppt"
-            );
+            fileStorageService.uploadFile(file, "ppt", title + ".pptx");
             return fileStorageService.getFileUrl(objectName);
         } catch (Exception e) {
             log.error("Failed to upload PPT: {}", e.getMessage());

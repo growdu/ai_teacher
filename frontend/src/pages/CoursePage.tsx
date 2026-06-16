@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Card, Row, Col } from 'antd'
+import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Card, Row, Col, Statistic } from 'antd'
 import { PlusOutlined, PlayCircleOutlined, FileTextOutlined, VideoCameraOutlined } from '@ant-design/icons'
-import { request } from '@/api/request'
+import request from '@/api/request'
 
 const { TextArea } = Input
 
@@ -87,7 +87,7 @@ const CoursePage = () => {
   const handleGenerateCourse = async (courseId: number) => {
     setGenerating(true)
     try {
-      const res = await request.post('/course/generate', { courseId })
+      const res = await request.post('/course/generate', { courseId }) as any
       if (res.code === 200) {
         message.success('课程生成成功')
         loadData()
@@ -103,7 +103,7 @@ const CoursePage = () => {
 
   const handleGeneratePpt = async (courseId: number) => {
     try {
-      const res = await request.post('/material/ppt/generate', { courseId })
+      const res = await request.post('/material/ppt/generate', { courseId }) as any
       if (res.code === 200) {
         message.success('PPT生成成功')
       } else {
@@ -116,7 +116,7 @@ const CoursePage = () => {
 
   const handleGenerateVideo = async (courseId: number) => {
     try {
-      const res = await request.post('/material/video/generate', { courseId })
+      const res = await request.post('/material/video/generate', { courseId }) as any
       if (res.code === 200) {
         message.success('视频生成任务已创建')
         const taskId = res.data?.taskId

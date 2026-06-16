@@ -44,7 +44,7 @@ public class ResourceService {
             resource.setFileSize(file.getSize());
             resource.setMimeType(file.getContentType());
             resource.setCreatedAt(LocalDateTime.now());
-            resource.setDeleted(0);
+            resource.setDeleted(false);
             
             resourceMapper.insert(resource);
             return resource;
@@ -70,7 +70,7 @@ public class ResourceService {
     public boolean delete(Long id) {
         Resource resource = new Resource();
         resource.setId(id);
-        resource.setDeleted(1);
+        resource.setDeleted(true);
         return resourceMapper.updateById(resource) > 0;
     }
 
