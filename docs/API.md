@@ -54,7 +54,7 @@ Login and get JWT token.
 **Request:**
 ```json
 {
-  "email": "admin@aiteacher.com",
+  "username": "admin",
   "password": "admin123"
 }
 ```
@@ -64,7 +64,7 @@ Login and get JWT token.
 {
   "code": 200,
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token": "eyJhbG...VCJ9...",
     "user": {
       "id": 1,
       "username": "admin",
@@ -220,7 +220,22 @@ Generate course outline and script from knowledge point.
 
 ### List Courses
 
-**GET** `/api/course/list?pageNum=1&pageSize=10`
+**GET** `/api/course/page?pageNum=1&pageSize=10`
+
+Pagination query for courses.
+
+**Response:**
+```json
+{
+  "code": 200,
+  "data": {
+    "records": [...],
+    "total": 25,
+    "pageNum": 1,
+    "pageSize": 10
+  }
+}
+```
 
 ### Get Course
 
@@ -300,14 +315,38 @@ Generate video from course script (async operation).
 }
 ```
 
-### List Materials
+### List Materials (Paginated)
 
-**GET** `/api/material/list?courseId=1&type=ppt`
+**GET** `/api/material/page?pageNum=1&pageSize=10&courseId=1&type=ppt`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| courseId | long | Filter by course |
-| type | string | Filter by type: ppt/video |
+| pageNum | int | Page number (default: 1) |
+| pageSize | int | Page size (default: 10) |
+| courseId | long | Filter by course (optional) |
+| type | string | Filter by type: ppt/video (optional) |
+
+**Response:**
+```json
+{
+  "code": 200,
+  "data": {
+    "records": [
+      {
+        "id": 1,
+        "courseId": 1,
+        "materialType": "ppt",
+        "fileUrl": "http://minio:9000/ai-teacher/ppt/xxx.pptx",
+        "status": "generated",
+        "createdAt": "2024-01-01T10:00:00"
+      }
+    ],
+    "total": 5,
+    "pageNum": 1,
+    "pageSize": 10
+  }
+}
+```
 
 ### Get Material
 
@@ -355,7 +394,9 @@ Generate video from course script (async operation).
 
 ## AI Config APIs
 
-### Create AI Config
+> **Note:** AI providers are configured via environment variables in production. The following API allows runtime inspection of provider status.
+
+### Create AI Config (Runtime)
 
 **POST** `/api/ai-config`
 
@@ -398,15 +439,56 @@ Reload provider configuration.
 {
   "code": 200,
   "data": {
-    "availableProviders": ["openai", "claude", "qwen"],
+    "availableProviders": ["openai", "claude", "qwen", "minimax"],
     "activeProvider": "openai",
     "models": {
       "openai": "gpt-4o",
-      "claude": "claude-3-5-sonnet-20241022"
-    }
+      "claude": "claude-3-5-sonnet-20241022",
+      "qwen": "qwen-max",
+      "minimax": "MiniMax-Text-01"
+    },
+    "ttsProviders": ["aliyun"],
+    "videoProviders": ["minimax"]
   }
 }
 ```
+
+---
+
+## Video Generation APIs
+
+### Generate Video (Async)
+
+**POST** `/api/material/video/generate`
+
+Generate video from course script (async operation).
+
+**Request:**
+```json
+{
+  "courseId": 1,
+  "script": "optional custom script override"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|---------|-------------|
+| courseId | long | Yes | Course ID |
+| script | string | No | Override course script |
+| pptId | long | No | PPT ID for background slides |
+
+**Response:**
+```json
+{
+  "code": 200,
+  "data": {
+    "taskId": 123,
+    "status": "pending"
+  }
+}
+```
+
+Poll `/api/task/{taskId}` for status until `status: "completed"` or `"failed"`.
 
 ---
 

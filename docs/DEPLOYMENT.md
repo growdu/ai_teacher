@@ -66,6 +66,7 @@ REDIS_PASSWORD=your_secure_redis_password
 # ===================
 # MinIO Object Storage
 # ===================
+MINIO_ENDPOINT=http://minio:9000
 MINIO_ROOT_USER=ai_teacher
 MINIO_ROOT_PASSWORD=your_secure_minio_password
 
@@ -76,11 +77,13 @@ MINIO_ROOT_PASSWORD=your_secure_minio_password
 JWT_SECRET=your_secure_jwt_secret_at_least_32_characters_long
 
 # ===================
-# AI API Keys (Optional)
+# AI API Keys (Configure at least one to enable AI features)
 # ===================
-OPENAI_API_KEY=sk-your-openai-api-key
-CLAUDE_API_KEY=sk-ant-your-claude-api-key
-QWEN_API_KEY=sk-your-qwen-api-key
+AI_OPENAI_API_KEY=sk-you...-key
+AI_CLAUDE_API_KEY=sk-ant...-key
+AI_QWEN_API_KEY=sk-you...-key
+AI_MINIMAX_API_KEY=your-minimax-api-key
+AI_MINIMAX_VIDEO_API_KEY=your-minimax-video-api-key
 
 # ===================
 # Aliyun TTS (Optional)
@@ -132,7 +135,7 @@ docker-compose down
 
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8080/api
-- **Swagger UI**: http://localhost:8080/swagger-ui/index.html
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
 - **MinIO Console**: http://localhost:9001 (login with MINIO_ROOT_USER/MINIO_ROOT_PASSWORD)
 
 ### Default Credentials

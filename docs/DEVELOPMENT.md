@@ -145,9 +145,12 @@ backend/
 │   │   │   ├── AbstractLLMProvider.java
 │   │   │   ├── OpenAILLMProvider.java
 │   │   │   ├── ClaudeLLMProvider.java
-│   │   │   └── QwenLLMProvider.java
-│   │   └── tts/                      # TTS providers
-│   │       └── AliyunTTSProvider.java
+│   │   │   ├── QwenLLMProvider.java
+│   │   │   └── MiniMaxLLMProvider.java
+│   │   ├── tts/                      # TTS providers
+│   │   │   └── AliyunTTSProvider.java
+│   │   └── video/                    # Video generation providers
+│   │       └── MiniMaxVideoProvider.java
 │   │
 │   ├── filter/                       # Servlet filters
 │   │   └── TenantFilter.java         # Multi-tenant filter
@@ -505,70 +508,110 @@ courseMapper.update(null, wrapper);
 
 ## AI Provider Development
 
+The platform uses a provider abstraction layer for LLM, TTS, and Video generation. All providers are registered via `AIProviderConfig` using environment variables.
+
+### AI Provider Configuration (via Environment Variables)
+
+| Variable | Provider | Description |
+|----------|----------|-------------|
+| `AI_OPENAI_API_KEY` | OpenAI LLM | GPT-4o |
+| `AI_CLAUDE_API_KEY` | Anthropic Claude | Claude 3.5 Sonnet |
+| `AI_QWEN_API_KEY` | Alibaba Qwen | Qwen-Max |
+| `AI_MINIMAX_API_KEY` | MiniMax LLM | MiniMax-Text-01 |
+| `AI_MINIMAX_VIDEO_API_KEY` | MiniMax Video | Video-01 |
+| `ALIYUN_TTS_ACCESS_KEY` | Aliyun TTS | Voice synthesis |
+
+All keys can also be prefixed with `AI_` or used without prefix. The application falls back to the shorter variable name.
+
 ### Add New LLM Provider
 
-1. Create provider class:
+1. Create provider class extending `AbstractLLMProvider`:
 
 ```java
-// provider/llm/NewLLMProvider.java
-package com.aiteacher.provider.llm;
-
-@Slf4j
-@Service
+// src/main/java/com/aiteacher/provider/llm/NewLLMProvider.java
 public class NewLLMProvider extends AbstractLLMProvider {
-    
-    @Autowired
-    private WebClient webClient;
-    
-    @Value("${ai.new.api-key:}")
-    private String apiKey;
-    
-    @Value("${ai.new.base-url:https://api.new.com}")
-    private String baseUrl;
-    
-    @Override
-    public String getProviderName() {
-        return "newllm";
+    public NewLLMProvider(String apiKey, String baseUrl, String model) {
+        this.apiKey = apiKey;
+        this.baseUrl = baseUrl != null ? baseUrl : "https://api.new.com";
+        this.model = model != null ? model : "new-model";
+        this.enabled = true;
+        this.priority = 8;
     }
-    
+
     @Override
-    public ChatResponse chat(String prompt) {
-        // Implementation
+    public ProviderType getProviderType() {
+        return ProviderType.NEW;
     }
-    
+
     @Override
-    public String generate(String prompt) {
-        return chat(prompt).getContent();
+    protected ChatResponse doChat(ChatRequest request) {
+        // Call the LLM API and parse response
+    }
+
+    @Override
+    protected List<String> doStream(ChatRequest request) {
+        // Optional: implement streaming
     }
 }
 ```
 
-2. Register in `AIProviderRegistry`:
+2. Register in `AIProviderConfig.java`:
 
 ```java
-@Autowired
-private NewLLMProvider newLLMProvider;
+@Value("${ai.new.api-key:}")
+private String newApiKey;
 
-@PostConstruct
-public void init() {
-    providerRegistry.register(newLLMProvider);
+@Bean
+public void configureAIProviders() {
+    if (newApiKey != null && !newApiKey.isEmpty()) {
+        NewLLMProvider provider = new NewLLMProvider(newApiKey, baseUrl, model);
+        registry.registerLLMProvider("new", provider);
+    }
 }
 ```
 
-3. Add configuration in `application.yml`:
+3. Add environment variable to `docker-compose.yml` backend service:
 
 ```yaml
-ai:
-  new:
-    api-key: ${NEW_API_KEY:}
-    base-url: https://api.new.com
+AI_NEW_API_KEY: ${AI_NEW_API_KEY:-}
 ```
 
 ### Add New TTS Provider
 
-1. Create TTS provider extending base class
-2. Implement `synthesize()` method
-3. Register in `AIProviderRegistry`
+1. Implement `TTSProvider` interface:
+
+```java
+public class MyTTSProvider implements TTSProvider {
+    @Override
+    public InputStream synthesize(String text, VoiceConfig voiceConfig) {
+        // Call TTS API, return audio stream
+    }
+
+    @Override
+    public ProviderType getProviderType() { return ProviderType.MY_TTS; }
+
+    @Override
+    public VoiceConfig[] getSupportedVoices() { return new VoiceConfig[]{...}; }
+}
+```
+
+2. Register in `AIProviderConfig`:
+
+```java
+@Autowired
+private AIProviderRegistry registry;
+
+@Bean
+public MyTTSProvider myTTSProvider() {
+    return new MyTTSProvider(apiKey, voice);
+}
+```
+
+### Add New Video Provider
+
+1. Create provider in `provider/video/`:
+2. Add `@Bean` in `AIProviderConfig` (see `MiniMaxVideoProvider` for pattern)
+3. Inject into `VideoGenerationService` via `@Autowired(required = false)`
 
 ---
 
