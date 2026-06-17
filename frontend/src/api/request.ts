@@ -24,6 +24,11 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Unwrap { code, message, data } → return only the data payload
+    const body = response.data
+    if (body && body.data !== undefined) {
+      return body.data
+    }
     return response.data
   },
   (error: AxiosError) => {
