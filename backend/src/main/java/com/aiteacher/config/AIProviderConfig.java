@@ -2,6 +2,7 @@ package com.aiteacher.config;
 
 import com.aiteacher.provider.AIProviderRegistry;
 import com.aiteacher.provider.llm.*;
+import com.aiteacher.provider.video.MiniMaxVideoProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +49,9 @@ public class AIProviderConfig {
     @Value("${ai.minimax.model:MiniMax-Text-01}")
     private String minimaxModel;
 
+    @Value("${ai.minimax.video-api-key:}")
+    private String minimaxVideoApiKey;
+
     @Autowired
     private AIProviderRegistry registry;
 
@@ -85,5 +89,19 @@ public class AIProviderConfig {
         if (registry.getLLMProviders().isEmpty()) {
             log.warn("No LLM providers registered. Please configure at least one AI provider.");
         }
+
+        // Register MiniMax Video provider if API key is set
+        if (minimaxVideoApiKey != null && !minimaxVideoApiKey.isEmpty()) {
+            MiniMaxVideoProvider videoProvider = new MiniMaxVideoProvider(minimaxVideoApiKey);
+            log.info("Registered MiniMax Video provider");
+        }
+    }
+
+    @Bean
+    public MiniMaxVideoProvider miniMaxVideoProvider() {
+        if (minimaxVideoApiKey == null || minimaxVideoApiKey.isEmpty()) {
+            return null;
+        }
+        return new MiniMaxVideoProvider(minimaxVideoApiKey);
     }
 }

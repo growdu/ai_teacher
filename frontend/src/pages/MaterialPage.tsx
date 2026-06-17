@@ -20,6 +20,11 @@ const MaterialPage = () => {
   const [generating, setGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
 
+  // 分页状态
+  const [pageNum, setPageNum] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [total, setTotal] = useState(0)
+
   const columns = [
     {
       title: 'ID',
@@ -123,8 +128,11 @@ const MaterialPage = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await request.get('/material/page?pageNum=1&pageSize=100')
+      const res = await request.get('/material/page', {
+        params: { pageNum, pageSize },
+      })
       setData(res.data?.records || [])
+      setTotal(res.data?.total || 0)
     } catch (error) {
       message.error('加载数据失败')
     } finally {
@@ -134,7 +142,7 @@ const MaterialPage = () => {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [pageNum, pageSize])
 
   const pptCount = data.filter(m => m.materialType === 'ppt').length
   const videoCount = data.filter(m => m.materialType === 'video').length
@@ -175,7 +183,18 @@ const MaterialPage = () => {
         dataSource={data}
         loading={loading}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: pageNum,
+          pageSize: pageSize,
+          total: total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (p, ps) => {
+            setPageNum(p)
+            setPageSize(ps || 10)
+          },
+        }}
       />
     </div>
   )

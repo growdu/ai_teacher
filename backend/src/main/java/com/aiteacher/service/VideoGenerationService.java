@@ -7,6 +7,7 @@ import com.aiteacher.entity.TeachingMaterial;
 import com.aiteacher.mapper.CourseMapper;
 import com.aiteacher.mapper.TeachingMaterialMapper;
 import com.aiteacher.provider.ai.VoiceConfig;
+import com.aiteacher.provider.video.MiniMaxVideoProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +50,9 @@ public class VideoGenerationService {
 
     @Value("${video.ffmpeg-path:ffmpeg}")
     private String ffmpegPath;
+
+    @Autowired(required = false)
+    private MiniMaxVideoProvider miniMaxVideoProvider;
 
     /**
      * Generate video asynchronously
@@ -167,16 +171,75 @@ public class VideoGenerationService {
         Files.createDirectories(outputPath);
         String videoFile = outputPath + "/video_" + System.currentTimeMillis() + ".mp4";
 
-        // Create a simple video with audio
-        // If PPT is provided, use PPT slides as background
+        // Use MiniMax Video API if available
+        if (miniMaxVideoProvider != null && miniMaxVideoProvider.isEnabled()) {
+            try {
+                asyncTaskService.updateProgress(taskId, 40, "调用MiniMax视频生成");
+                // Build prompt from course script
+                String prompt = buildVideoPrompt(request);
+                String downloadedPath = miniMaxVideoProvider.generateVideo(prompt, 6, outputDir);
+                // Replace audio with our TTS audio
+                return replaceAudio(downloadedPath, audioPath, videoFile);
+            } catch (Exception e) {
+                log.warn("MiniMax video generation failed, falling back to FFmpeg: {}", e.getMessage());
+            }
+        }
+
+        // Fallback: create simple video with FFmpeg
         if (request.getPptId() != null) {
-            // TODO: Convert PPT to images and create video
-            // For now, create a simple slide show video
             return createSlideShowVideo(audioPath, videoFile);
         } else {
-            // Create a simple black background video with audio
             return createSimpleVideo(audioPath, videoFile);
         }
+    }
+
+    private String buildVideoPrompt(VideoGenerateRequest request) {
+        // Build a descriptive prompt for MiniMax video generation
+        Course course = null;
+        try {
+            course = courseMapper.selectById(request.getCourseId());
+        } catch (Exception ignored) {}
+        
+        String title = course != null ? course.getTitle() : "";
+        String script = request.getScript() != null ? request.getScript() 
+                : course != null ? course.getScript() : "";
+        
+        // Truncate and clean script for prompt
+        if (script.length() > 500) {
+            script = script.substring(0, 500) + "...";
+        }
+        script = script.replaceAll("#+\\s*", "").replaceAll("\\*+", "").replaceAll("\n+", " ");
+        
+        return String.format("教育视频：%s。内容：%s", title, script);
+    }
+
+    private String replaceAudio(String videoPath, String audioPath, String outputFile) throws Exception {
+        // Use FFmpeg to replace the video's audio with our TTS audio
+        ProcessBuilder pb = new ProcessBuilder(
+                ffmpegPath,
+                "-i", videoPath,       // input video
+                "-i", audioPath,       // new audio
+                "-c:v", "copy",        // keep original video stream
+                "-c:a", "aac",         // re-encode audio
+                "-shortest",
+                "-y",
+                outputFile
+        );
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.debug("FFmpeg replace audio: {}", line);
+            }
+        }
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("FFmpeg replace audio failed: " + exitCode);
+        }
+        // Cleanup source video
+        Files.deleteIfExists(Path.of(videoPath));
+        return outputFile;
     }
 
     private String createSimpleVideo(String audioPath, String videoOutput) throws Exception {

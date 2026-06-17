@@ -30,6 +30,11 @@ const CoursePage = () => {
   const [form] = Form.useForm()
   const navigate = useNavigate()
 
+  // 分页状态
+  const [pageNum, setPageNum] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [total, setTotal] = useState(0)
+
   const columns = [
     {
       title: 'ID',
@@ -186,8 +191,11 @@ const CoursePage = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await request.get('/course/page?pageNum=1&pageSize=100')
+      const res = await request.get('/course/page', {
+        params: { pageNum, pageSize },
+      })
       setData(res.data?.records || [])
+      setTotal(res.data?.total || 0)
     } catch (error) {
       message.error('加载数据失败')
     } finally {
@@ -197,7 +205,7 @@ const CoursePage = () => {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [pageNum, pageSize])
 
   return (
     <div>
@@ -214,7 +222,7 @@ const CoursePage = () => {
       <Row gutter={16} className="mb-4">
         <Col span={6}>
           <Card>
-            <Statistic title="课程总数" value={data.length} />
+            <Statistic title="课程总数" value={total} />
           </Card>
         </Col>
         <Col span={6}>
@@ -239,7 +247,18 @@ const CoursePage = () => {
         dataSource={data}
         loading={loading}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: pageNum,
+          pageSize: pageSize,
+          total: total,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (p, ps) => {
+            setPageNum(p)
+            setPageSize(ps || 10)
+          },
+        }}
       />
 
       <Modal
