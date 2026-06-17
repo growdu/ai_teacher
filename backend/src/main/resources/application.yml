@@ -81,17 +81,21 @@ management:
 # AI Provider Configuration
 ai:
   openai:
-    api-key: ${OPENAI_API_KEY:}
-    base-url: ${OPENAI_BASE_URL:}
+    api-key: ${AI_OPENAI_API_KEY:${OPENAI_API_KEY:}}
+    base-url: ${AI_OPENAI_BASE_URL:${OPENAI_BASE_URL:https://api.openai.com}}
     model: gpt-4o
   claude:
-    api-key: ${CLAUDE_API_KEY:}
-    base-url: ${CLAUDE_BASE_URL:}
+    api-key: ${AI_CLAUDE_API_KEY:${CLAUDE_API_KEY:}}
+    base-url: ${AI_CLAUDE_BASE_URL:${CLAUDE_BASE_URL:https://api.anthropic.com}}
     model: claude-3-5-sonnet-20240620
   qwen:
-    api-key: ${QWEN_API_KEY:}
-    base-url: ${QWEN_BASE_URL:}
+    api-key: ${AI_QWEN_API_KEY:${QWEN_API_KEY:}}
+    base-url: ${AI_QWEN_BASE_URL:${QWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}}
     model: qwen-max
+  minimax:
+    api-key: ${AI_MINIMAX_API_KEY:}
+    base-url: ${AI_MINIMAX_BASE_URL:https://api.minimax.chat/v1}
+    model: MiniMax-Text-01
 
 logging:
   level:

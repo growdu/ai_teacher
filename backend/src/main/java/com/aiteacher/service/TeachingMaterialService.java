@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class TeachingMaterialService {
 
@@ -14,7 +16,14 @@ public class TeachingMaterialService {
     private TeachingMaterialMapper teachingMaterialMapper;
 
     public Page<TeachingMaterial> page(Page<TeachingMaterial> page, LambdaQueryWrapper<TeachingMaterial> wrapper) {
-        return teachingMaterialMapper.selectPage(page, wrapper);
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
+        List<TeachingMaterial> records = teachingMaterialMapper.selectList(wrapper);
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
+        return page;
     }
 
     public TeachingMaterial getById(Long id) {

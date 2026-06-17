@@ -123,8 +123,8 @@ const MaterialPage = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await request.get('/material/list')
-      setData(res.data || [])
+      const res = await request.get('/material/page?pageNum=1&pageSize=100')
+      setData(res.data?.records || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {

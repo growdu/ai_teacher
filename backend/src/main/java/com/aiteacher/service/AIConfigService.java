@@ -165,7 +165,14 @@ public class AIConfigService {
      * Page query AI configs
      */
     public Page<AiConfig> page(Page<AiConfig> page, LambdaQueryWrapper<AiConfig> wrapper) {
-        return aiConfigMapper.selectPage(page, wrapper);
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
+        List<AiConfig> records = aiConfigMapper.selectList(wrapper);
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
+        return page;
     }
 
     /**

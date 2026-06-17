@@ -49,6 +49,9 @@ public class KnowledgePointController {
 
     @PostMapping
     public R<Boolean> create(@RequestBody KnowledgePoint knowledgePoint) {
+        if (knowledgePoint.getTenantId() == null) {
+            knowledgePoint.setTenantId(1L);
+        }
         return R.ok(knowledgePointService.save(knowledgePoint));
     }
 
@@ -56,5 +59,13 @@ public class KnowledgePointController {
     public R<Boolean> update(@PathVariable Long id, @RequestBody KnowledgePoint knowledgePoint) {
         knowledgePoint.setId(id);
         return R.ok(knowledgePointService.updateById(knowledgePoint));
+    }
+
+    @DeleteMapping("/{id}")
+    public R<Boolean> delete(@PathVariable Long id) {
+        KnowledgePoint kp = new KnowledgePoint();
+        kp.setId(id);
+        kp.setDeleted(true);
+        return R.ok(knowledgePointService.updateById(kp));
     }
 }

@@ -7,6 +7,7 @@ public enum ProviderType {
     OPENAI("OpenAI"),
     CLAUDE("Claude"),
     QWEN("Qwen"),
+    MINIMAX("MiniMax"),
     DEEPSEEK("DeepSeek"),
     ALIYUN_TTS("Aliyun TTS"),
     VOLCENGINE_TTS("Volcengine TTS");

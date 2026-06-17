@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import request from '@/api/request'
@@ -138,8 +138,8 @@ const KnowledgePage = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await request.get('/knowledge-point/list')
-      setData(res.data || [])
+      const res = await request.get('/knowledge-point/page?pageNum=1&pageSize=100')
+      setData(res.data?.records || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {
@@ -148,9 +148,9 @@ const KnowledgePage = () => {
   }
 
   // Initial load
-  useState(() => {
+  useEffect(() => {
     loadData()
-  })
+  }, [])
 
   return (
     <div>

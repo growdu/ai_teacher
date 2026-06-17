@@ -20,7 +20,14 @@ public class KnowledgePointService {
     }
 
     public Page<KnowledgePoint> page(Page<KnowledgePoint> page, LambdaQueryWrapper<KnowledgePoint> wrapper) {
-        return knowledgePointMapper.selectPage(page, wrapper);
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
+        List<KnowledgePoint> records = knowledgePointMapper.selectList(wrapper);
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
+        return page;
     }
 
     public KnowledgePoint getById(Long id) {

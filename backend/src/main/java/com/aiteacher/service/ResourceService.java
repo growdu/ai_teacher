@@ -56,7 +56,14 @@ public class ResourceService {
     }
 
     public Page<Resource> page(Page<Resource> page, LambdaQueryWrapper<Resource> wrapper) {
-        return resourceMapper.selectPage(page, wrapper);
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
+        List<Resource> records = resourceMapper.selectList(wrapper);
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
+        return page;
     }
 
     public Resource getById(Long id) {

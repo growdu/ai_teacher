@@ -68,6 +68,10 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES: "true"
+      AI_OPENAI_API_KEY: ${AI_OPENAI_API_KEY:}
+      AI_CLAUDE_API_KEY: ${AI_CLAUDE_API_KEY:}
+      AI_QWEN_API_KEY: ${AI_QWEN_API_KEY:}
+      AI_MINIMAX_API_KEY: ${AI_MINIMAX_API_KEY:}
     depends_on:
       postgres:
         condition: service_healthy

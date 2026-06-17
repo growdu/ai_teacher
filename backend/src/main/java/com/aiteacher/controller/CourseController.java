@@ -5,6 +5,7 @@ import com.aiteacher.dto.CourseGenerateRequest;
 import com.aiteacher.dto.CourseGenerateResponse;
 import com.aiteacher.entity.Course;
 import com.aiteacher.service.CourseGenerateService;
+import com.aiteacher.mapper.CourseMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
@@ -20,6 +21,12 @@ public class CourseController {
 
     @Autowired
     private CourseGenerateService courseGenerateService;
+
+    @Autowired
+    private CourseMapper courseMapper;
+
+    @Autowired
+    private javax.sql.DataSource dataSource;
 
     /**
      * Generate a new course from knowledge point
@@ -99,5 +106,22 @@ public class CourseController {
             return (Long) authentication.getDetails();
         }
         return 1L;
+    }
+
+    @GetMapping("/debug/all")
+    public R<Object> debugAllCourses() {
+        try {
+            java.sql.Connection conn = dataSource.getConnection();
+            java.sql.ResultSet rs = conn.createStatement().executeQuery("SELECT id, title, status FROM course");
+            StringBuilder sb = new StringBuilder();
+            while (rs.next()) {
+                sb.append(rs.getLong("id")).append(": ").append(rs.getString("title")).append(", ");
+            }
+            rs.close();
+            conn.close();
+            return R.ok(sb.toString());
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
     }
 }

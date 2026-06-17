@@ -34,7 +34,14 @@ public class WorkspaceService {
     }
 
     public Page<Workspace> page(Page<Workspace> page, LambdaQueryWrapper<Workspace> wrapper) {
-        return workspaceMapper.selectPage(page, wrapper);
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
+        List<Workspace> records = workspaceMapper.selectList(wrapper);
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
+        return page;
     }
 
     public boolean update(Workspace workspace) {

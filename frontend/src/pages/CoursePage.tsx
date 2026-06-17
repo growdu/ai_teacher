@@ -1,9 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Card, Row, Col, Statistic } from 'antd'
 import { PlusOutlined, PlayCircleOutlined, FileTextOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import request from '@/api/request'
-
-const { TextArea } = Input
 
 interface Course {
   id: number
@@ -14,12 +12,20 @@ interface Course {
   outline?: any
 }
 
+interface KnowledgePoint {
+  id: number
+  subject: string
+  grade: string
+  content: string
+}
+
 const CoursePage = () => {
   const [data, setData] = useState<Course[]>([])
+  const [knowledgePoints, setKnowledgePoints] = useState<KnowledgePoint[]>([])
   const [loading, setLoading] = useState(false)
-  const [modalVisible, setModalVisible] = useState(false)
-  const [form] = Form.useForm()
+  const [createModalVisible, setCreateModalVisible] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [form] = Form.useForm()
 
   const columns = [
     {
@@ -68,12 +74,8 @@ const CoursePage = () => {
           <Button
             type="primary"
             icon={<PlayCircleOutlined />}
-            onClick={() => handleGenerateCourse(record.id)}
-            loading={generating}
+            onClick={() => handleGeneratePpt(record.id)}
           >
-            生成课程
-          </Button>
-          <Button icon={<FileTextOutlined />} onClick={() => handleGeneratePpt(record.id)}>
             生成PPT
           </Button>
           <Button icon={<VideoCameraOutlined />} onClick={() => handleGenerateVideo(record.id)}>
@@ -84,18 +86,36 @@ const CoursePage = () => {
     },
   ]
 
-  const handleGenerateCourse = async (courseId: number) => {
-    setGenerating(true)
+  // 加载知识点列表（用于创建课程表单）
+  const loadKnowledgePoints = async () => {
     try {
-      const res = await request.post('/course/generate', { courseId }) as any
+      const res = await request.get('/knowledge-point/page?pageNum=1&pageSize=100')
+      setKnowledgePoints(res.data?.records || [])
+    } catch (error) {
+      message.error('加载知识点失败')
+    }
+  }
+
+  const handleCreateCourse = async () => {
+    try {
+      const values = await form.validateFields()
+      setGenerating(true)
+      const res = await request.post('/course/generate', {
+        knowledgePointId: values.knowledgePointId,
+        title: values.title || undefined,
+        chapterCount: values.chapterCount || undefined,
+      }) as any
       if (res.code === 200) {
         message.success('课程生成成功')
+        setCreateModalVisible(false)
+        form.resetFields()
         loadData()
       } else {
         message.error(res.message || '生成失败')
       }
-    } catch (error) {
-      message.error('生成失败')
+    } catch (error: any) {
+      if (error.errorFields) return // 表单验证失败
+      message.error(error?.message || '生成失败')
     } finally {
       setGenerating(false)
     }
@@ -150,24 +170,11 @@ const CoursePage = () => {
     }, 3000)
   }
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields()
-      await request.post('/knowledge-point', values)
-      message.success('创建成功')
-      setModalVisible(false)
-      form.resetFields()
-      loadData()
-    } catch (error) {
-      message.error('创建失败')
-    }
-  }
-
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await request.get('/course/list')
-      setData(res.data || [])
+      const res = await request.get('/course/page?pageNum=1&pageSize=100')
+      setData(res.data?.records || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {
@@ -175,10 +182,20 @@ const CoursePage = () => {
     }
   }
 
+  useEffect(() => {
+    loadData()
+  }, [])
+
   return (
     <div>
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-bold">课程管理</h2>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+          loadKnowledgePoints()
+          setCreateModalVisible(true)
+        }}>
+          创建课程
+        </Button>
       </div>
 
       <Row gutter={16} className="mb-4">
@@ -211,6 +228,52 @@ const CoursePage = () => {
         rowKey="id"
         pagination={{ pageSize: 10 }}
       />
+
+      <Modal
+        title="创建课程"
+        open={createModalVisible}
+        onOk={handleCreateCourse}
+        onCancel={() => {
+          setCreateModalVisible(false)
+          form.resetFields()
+        }}
+        confirmLoading={generating}
+        width={500}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="knowledgePointId"
+            label="选择知识点"
+            rules={[{ required: true, message: '请选择知识点' }]}
+          >
+            <Select
+              placeholder="请选择一个知识点"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children as any)?.props?.children?.toLowerCase?.().includes(input.toLowerCase()) ?? false
+              }
+            >
+              {knowledgePoints.map(kp => (
+                <Select.Option key={kp.id} value={kp.id}>
+                  {kp.subject} - {kp.grade} - {kp.content.substring(0, 30)}
+                  {kp.content.length > 30 ? '...' : ''}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item name="title" label="课程标题（可选）">
+            <Input placeholder="不填则由AI自动生成" />
+          </Form.Item>
+          <Form.Item name="chapterCount" label="章节数量（可选）">
+            <Select placeholder="默认4章" allowClear>
+              {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                <Select.Option key={n} value={n}>{n} 章</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

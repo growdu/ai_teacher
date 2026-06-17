@@ -30,7 +30,14 @@ public class TenantService {
     }
 
     public Page<Tenant> page(Page<Tenant> page, LambdaQueryWrapper<Tenant> wrapper) {
-        return tenantMapper.selectPage(page, wrapper);
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
+        List<Tenant> records = tenantMapper.selectList(wrapper);
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
+        return page;
     }
 
     public List<Tenant> list(LambdaQueryWrapper<Tenant> wrapper) {
