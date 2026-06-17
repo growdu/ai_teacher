@@ -10,6 +10,10 @@ node_modules/
 */dist/
 dist/
 
+# MkDocs build output
+site/
+_site/
+
 # IDE
 .idea/
 .vscode/

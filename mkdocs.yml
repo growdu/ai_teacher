@@ -1,0 +1,66 @@
+site_name: AI Teacher Studio 文档
+site_url: https://growdu.github.io/ai_teacher/
+site_description: AI Teacher Studio 智能化教学资源生成平台 - 技术文档
+
+repo_name: growdu/ai_teacher
+repo_url: https://github.com/growdu/ai_teacher
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search:
+      lang:
+        - en
+        - zh
+  - awesome-pages
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - 快速开始:
+      - 安装部署: DEPLOYMENT.md
+      - 开发指南: DEVELOPMENT.md
+  - 技术文档:
+      - API 文档: API.md
+      - 架构设计: architecture-design.md
+      - 技术选型: tech-stack.md
+      - 高层设计: high-level-design.md
+      - 实现计划: implementation-plan.md
