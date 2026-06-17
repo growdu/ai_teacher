@@ -122,27 +122,30 @@ docker-compose down
 
 ### Service Ports
 
-| Service | Internal Port | External Port | URL |
-|---------|---------------|---------------|-----|
-| Frontend | 80 | 3000 | http://localhost:3000 |
-| Backend | 8080 | 8080 | http://localhost:8080 |
-| PostgreSQL | 5432 | 5432 | localhost:5432 |
-| Redis | 6379 | 6379 | localhost:6379 |
-| MinIO API | 9000 | 9000 | http://localhost:9000 |
-| MinIO Console | 9001 | 9001 | http://localhost:9001 |
+| Service | Listen Address | Via Nginx | Description |
+|---------|---------------|-----------|-------------|
+| Nginx Reverse Proxy | `*:80`, `*:443` | — | **Single entry point** for all HTTP traffic |
+| Frontend | `127.0.0.1:3000` | `/` | React SPA, accessed via Nginx |
+| Backend API | `127.0.0.1:8080` | `/api/*` | Spring Boot, accessed via Nginx |
+| PostgreSQL | internal only | — | Docker network only |
+| Redis | internal only | — | Docker network only |
+| MinIO API | `127.0.0.1:9000` | — | Docker network only (localhost only) |
+| MinIO Console | `127.0.0.1:9001` | — | Docker network only (localhost only) |
+
+> **Security:** Only Nginx (port 80/443) is exposed to the internet. Database, Redis, MinIO, and backend are on Docker internal networks.
 
 ### Accessing Services
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080/api
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **MinIO Console**: http://localhost:9001 (login with MINIO_ROOT_USER/MINIO_ROOT_PASSWORD)
+- **Production URL**: http://your-server-ip/ (via Nginx reverse proxy)
+- **Backend API**: http://your-server-ip/api/
+- **Swagger UI**: http://your-server-ip/swagger-ui/
+- **MinIO Console**: http://localhost:9001 (local access only)
 
 ### Default Credentials
 
 ```
-Admin Login:
-Email: admin@aiteacher.com
+Admin Login (via API):
+Username: admin
 Password: admin123
 ```
 
@@ -212,12 +215,27 @@ MINIO_ROOT_PASSWORD=production_minio_password
 # JWT - Use a strong, unique secret
 JWT_SECRET=production_jwt_secret_at_least_256_bits_long_for_security
 
-# AI Keys
-OPENAI_API_KEY=sk-prod-openai-key
-CLAUDE_API_KEY=sk-ant-prod-claude-key
+# AI Provider Keys (AI_ prefix for docker-compose)
+AI_OPENAI_API_KEY=sk-prod...key
+AI_CLAUDE_API_KEY=sk-ant...key
+AI_QWEN_API_KEY=sk-prod...key
+AI_MINIMAX_API_KEY=your-minimax-key
+AI_MINIMAX_VIDEO_API_KEY=your-minimax-video-key
 ```
 
-### 5. Start Services
+### 5. Deploy Nginx Reverse Proxy
+
+The project includes a production-ready Nginx configuration managed by Docker Compose. No separate Nginx installation is required — the `nginx` service in docker-compose.yml handles all reverse proxy duties.
+
+If you need to install Nginx on the host (not required with Docker setup):
+
+```bash
+# Not required — Nginx runs as a Docker container (nginx:alpine)
+# Docker Compose automatically starts the nginx service
+docker compose up -d nginx
+```
+
+### 6. Start Services
 
 ```bash
 cd /opt/ai-teacher
