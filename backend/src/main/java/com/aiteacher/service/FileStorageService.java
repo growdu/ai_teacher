@@ -20,6 +20,9 @@ public class FileStorageService {
     @Value("${minio.bucket-name}")
     private String bucketName;
 
+    @Value("${minio.endpoint}")
+    private String endpoint;
+
     @Value("${minio.secure}")
     private boolean secure;
 
@@ -91,6 +94,7 @@ public class FileStorageService {
 
     public String getFileUrl(String objectName) {
         try {
+            // Try SDK presigned URL first
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .bucket(bucketName)
@@ -99,7 +103,9 @@ public class FileStorageService {
                             .build()
             );
         } catch (Exception e) {
-            throw new RuntimeException("Failed to get file URL", e);
+            // Fallback: construct URL directly (works for MinIO without SDK quirks)
+            String base = endpoint.endsWith("/") ? endpoint : endpoint + "/";
+            return base + bucketName + "/" + objectName;
         }
     }
 

@@ -250,7 +250,7 @@ public class CourseGenerateService {
      * Get course by ID
      */
     public Course getById(Long id) {
-        return courseMapper.selectByIdCustom(id);
+        return courseMapper.selectOne(new LambdaQueryWrapper<Course>().eq(Course::getId, id).eq(Course::getDeleted, false));
     }
 
     /**

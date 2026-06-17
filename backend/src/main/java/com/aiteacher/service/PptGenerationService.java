@@ -209,6 +209,7 @@ public class PptGenerationService {
                     outputFile,
                     configFile
             );
+            pb.environment().put("NODE_PATH", "/usr/local/lib/node_modules");
             pb.redirectErrorStream(true);
 
             Process process = pb.start();

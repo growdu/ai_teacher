@@ -12,7 +12,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/ai_teacher
     username: postgres
-    password: postgres
+    password: ${DATABASE_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -24,7 +24,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: ""
+      password: ${REDIS_PASSWORD}
       database: 0
       timeout: 3000ms
       lettuce:
@@ -61,9 +61,9 @@ video:
   ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
 
 minio:
-  endpoint: http://localhost:9000
-  access-key: minioadmin
-  secret-key: minioadmin
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ROOT_USER}
+  secret-key: ${MINIO_ROOT_PASSWORD}
   bucket-name: ai-teacher
   secure: false
 

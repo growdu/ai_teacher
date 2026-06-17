@@ -23,8 +23,9 @@ COPY --from=builder /app/target/*.jar app.jar
 # Copy PPT generation scripts
 COPY scripts/ ./scripts/
 
-# Install pptxgenjs for PPT generation
-RUN npm install -g pptxgenjs 2>/dev/null || true
+# Install Node.js for PPT generation script (pre-built binary, no apt needed)
+RUN curl -fsSL https://nodejs.org/dist/v20.17.0/node-v20.17.0-linux-x64.tar.gz | tar -xz -C /usr/local --strip-components=1 && \
+    npm install -g pptxgenjs
 
 # Expose port
 EXPOSE 8080

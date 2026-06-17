@@ -24,9 +24,7 @@ public class MyBatisPlusConfig {
         return interceptor;
     }
 
-    // Register Jackson JSON type handler for JSONB columns
-    @Bean
-    public TypeHandler<?> jacksonJsonbTypeHandler() {
-        return new JacksonJsonbTypeHandler();
-    }
+    // Jackson JSON type handler removed - caused parameter binding issues
+    // If JSONB columns need special handling, add explicit @TableField annotations
+    // or use resultType mapping instead
 }
