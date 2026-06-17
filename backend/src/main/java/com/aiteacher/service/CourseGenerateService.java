@@ -257,10 +257,13 @@ public class CourseGenerateService {
      * Page query courses
      */
     public Page<Course> page(Page<Course> page, LambdaQueryWrapper<Course> wrapper) {
-        // Bypass pagination interceptor - use custom query
+        // Bypass PaginationInnerInterceptor - use manual LIMIT/OFFSET via full load + slice
         List<Course> records = courseMapper.selectAllForList();
-        page.setRecords(records);
-        page.setTotal(records.size());
+        int total = records.size();
+        int fromIndex = (int) ((page.getCurrent() - 1) * page.getSize());
+        int toIndex = (int) Math.min(fromIndex + page.getSize(), total);
+        page.setTotal(total);
+        page.setRecords(fromIndex < total ? records.subList(fromIndex, toIndex) : List.of());
         return page;
     }
 

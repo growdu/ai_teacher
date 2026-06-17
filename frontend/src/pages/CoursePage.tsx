@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Card, Row, Col, Statistic } from 'antd'
-import { PlusOutlined, PlayCircleOutlined, FileTextOutlined, VideoCameraOutlined } from '@ant-design/icons'
+import { PlusOutlined, EyeOutlined, FileTextOutlined, PlayCircleOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import request from '@/api/request'
+import { useNavigate } from 'react-router-dom'
 
 interface Course {
   id: number
@@ -10,6 +11,7 @@ interface Course {
   knowledgePointId: number
   createdAt: string
   outline?: any
+  script?: string
 }
 
 interface KnowledgePoint {
@@ -26,6 +28,7 @@ const CoursePage = () => {
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [form] = Form.useForm()
+  const navigate = useNavigate()
 
   const columns = [
     {
@@ -68,14 +71,23 @@ const CoursePage = () => {
     {
       title: '操作',
       key: 'action',
-      width: 250,
+      width: 320,
       render: (_: any, record: Course) => (
-        <Space>
+        <Space wrap>
           <Button
             type="primary"
-            icon={<PlayCircleOutlined />}
-            onClick={() => handleGeneratePpt(record.id)}
+            icon={<EyeOutlined />}
+            onClick={() => navigate(`/course/${record.id}`)}
           >
+            查看详情
+          </Button>
+          <Button
+            icon={<FileTextOutlined />}
+            onClick={() => navigate(`/quiz?courseId=${record.id}`)}
+          >
+            生成测验
+          </Button>
+          <Button icon={<PlayCircleOutlined />} onClick={() => handleGeneratePpt(record.id)}>
             生成PPT
           </Button>
           <Button icon={<VideoCameraOutlined />} onClick={() => handleGenerateVideo(record.id)}>
@@ -126,6 +138,7 @@ const CoursePage = () => {
       const res = await request.post('/material/ppt/generate', { courseId }) as any
       if (res.code === 200) {
         message.success('PPT生成成功')
+        loadData()
       } else {
         message.error(res.message || 'PPT生成失败')
       }

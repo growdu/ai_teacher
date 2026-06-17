@@ -50,6 +50,16 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+# PPT Generation
+ppt:
+  node-script: ${PPT_NODE_SCRIPT:./scripts/generate-ppt.js}
+  output-dir: ${PPT_OUTPUT_DIR:/tmp/ppt}
+
+# Video Generation
+video:
+  output-dir: ${VIDEO_OUTPUT_DIR:/tmp/video}
+  ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
+
 minio:
   endpoint: http://localhost:9000
   access-key: minioadmin

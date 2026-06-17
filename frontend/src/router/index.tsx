@@ -5,7 +5,9 @@ import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import KnowledgePage from '@/pages/KnowledgePage'
 import CoursePage from '@/pages/CoursePage'
+import CourseDetailPage from '@/pages/CourseDetailPage'
 import MaterialPage from '@/pages/MaterialPage'
+import QuizPage from '@/pages/QuizPage'
 import SettingsPage from '@/pages/SettingsPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -42,8 +44,16 @@ const router = createBrowserRouter([
         element: <CoursePage />,
       },
       {
+        path: 'course/:id',
+        element: <CourseDetailPage />,
+      },
+      {
         path: 'materials',
         element: <MaterialPage />,
+      },
+      {
+        path: 'quiz',
+        element: <QuizPage />,
       },
       {
         path: 'settings',
