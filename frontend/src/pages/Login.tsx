@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Form, Input, Button, Card, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import request from '@/api/request'
-import { useUserStore } from '@/store/userStore'
+import { useUserStore, userStore } from '@/store/userStore'
 import type { LoginRequest, LoginResponse } from '@/api/types'
 
 const Login = () => {

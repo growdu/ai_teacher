@@ -568,6 +568,40 @@ docker exec ai-teacher-redis redis-cli -a $REDIS_PASSWORD ping
 - [x] Phase 5: 前端开发
 - [x] Phase 6: 验证完善
 
+## 在线文档
+
+技术文档部署在 GitHub Pages：
+
+- 文档地址: https://growdu.github.io/ai_teacher/
+- 自动构建: 每次 push 到 main 分支自动部署
+
+| 文档 | 说明 |
+|------|------|
+| 安装部署 | Docker Compose 生产环境部署指南 |
+| 开发指南 | 本地开发、环境配置、调试方法 |
+| API 文档 | REST API 完整接口参考 |
+| 架构设计 | 系统架构、模块设计 |
+| 技术选型 | 技术栈选择理由 |
+| 高层设计 | 核心流程设计 |
+
+## 最近更新
+
+### v1.1 - 认证流程修复 (2024-06-18)
+
+- **Bug Fix**: 修复前端请求未携带认证 Token 的问题
+  - 原因：`request.ts` 使用 `localStorage.getItem('token')` 但 Zustand 将 token 存在 `user-storage` 中
+  - 修复：改为通过 Zustand store 正确读取 token
+- **优化**: 完善 CORS 配置，支持前后端分离部署
+- **文档**: 更新部署指南，完善 API 接口说明
+
+### v1.0 - 初始版本 (2024-06-17)
+
+- 支持课程、大纲、讲稿自动生成
+- 支持 PPT 生成（4 种模板）
+- 支持视频生成（TTS + 视频混流）
+- 多租户支持
+- AI Provider 动态切换
+
 ### 计划功能
 
 - [ ] 支持更多 AI Provider (Gemini, Groq)

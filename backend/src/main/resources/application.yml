@@ -1,6 +1,12 @@
 server:
   port: 8080
 
+cors:
+  allowed-origins: >-
+    http://localhost:80,http://localhost:3000,
+    http://127.0.0.1:80,http://127.0.0.1:3000,
+    http://43.155.143.50,https://43.155.143.50
+
 spring:
   application:
     name: ai-teacher-studio

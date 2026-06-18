@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 import { message } from 'antd'
+import { userStore } from '@/store/userStore'
 
 const request: AxiosInstance = axios.create({
   baseURL: '/api',
@@ -11,7 +12,8 @@ const request: AxiosInstance = axios.create({
 
 request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token')
+    // Use raw store getState() to get the latest token synchronously
+    const token = userStore.getState().token
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }

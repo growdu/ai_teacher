@@ -10,7 +10,7 @@ interface UserState {
   logout: () => void
 }
 
-export const useUserStore = create<UserState>()(
+export const userStore = create<UserState>()(
   persist(
     (set) => ({
       user: null,
@@ -24,3 +24,5 @@ export const useUserStore = create<UserState>()(
     }
   )
 )
+
+export const useUserStore = () => userStore((state) => state)
