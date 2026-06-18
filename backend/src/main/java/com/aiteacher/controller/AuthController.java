@@ -3,6 +3,7 @@ package com.aiteacher.controller;
 import com.aiteacher.common.R;
 import com.aiteacher.dto.LoginRequest;
 import com.aiteacher.dto.LoginResponse;
+import com.aiteacher.dto.RegisterRequest;
 import com.aiteacher.entity.User;
 import com.aiteacher.mapper.UserMapper;
 import com.aiteacher.service.AuthService;
@@ -40,6 +41,27 @@ public class AuthController {
     @Operation(summary = "User login", description = "Authenticate user and return JWT token")
     public R<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "User registration", description = "Register a new user and return JWT token")
+    public R<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return authService.register(request);
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token", description = "Use refresh token to get a new access token")
+    public R<Map<String, String>> refresh(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return R.fail("refreshToken is required");
+        }
+        try {
+            String newAccessToken = authService.refreshToken(refreshToken);
+            return R.ok("token refreshed", Map.of("token", newAccessToken));
+        } catch (Exception e) {
+            return R.fail("无效或已过期的 refresh token");
+        }
     }
 
     @GetMapping("/debug/user/{username}")

@@ -2,10 +2,7 @@ server:
   port: 8080
 
 cors:
-  allowed-origins: >-
-    http://localhost:80,http://localhost:3000,
-    http://127.0.0.1:80,http://127.0.0.1:3000,
-    http://43.155.143.50,https://43.155.143.50
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:80,http://localhost:3000}
 
 spring:
   application:
@@ -74,7 +71,7 @@ minio:
   secure: false
 
 jwt:
-  secret: your-256-bit-secret-key-here-change-in-production-minimum-32-chars
+  secret: ${JWT_SECRET}
   expiration: 86400000
   header: Authorization
   prefix: Bearer
@@ -89,10 +86,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: when_authorized
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 
 # AI Provider Configuration
 ai:
@@ -115,5 +116,9 @@ ai:
 
 logging:
   level:
-    com.aiteacher: DEBUG
+    com.aiteacher: INFO
     org.springframework: INFO
+
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:prod}

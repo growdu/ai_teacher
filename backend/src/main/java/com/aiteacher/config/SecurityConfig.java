@@ -18,8 +18,11 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:80,http://localhost:3000,http://127.0.0.1:80,http://127.0.0.1:3000}")
+    @Value("${cors.allowed-origins:http://localhost:80,http://localhost:3000}")
     private String allowedOrigins;
+
+    @Value("${spring.profiles.active:prod}")
+    private String activeProfile;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -34,7 +37,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/health", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health", "/actuator/**").permitAll()
+                        // Swagger only in dev profile
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").access((request, authorization) -> {
+                            if ("dev".equals(activeProfile)) {
+                                return authorization;
+                            }
+                            return new org.springframework.security.authorization.AuthorizationDecision(false);
+                        })
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )

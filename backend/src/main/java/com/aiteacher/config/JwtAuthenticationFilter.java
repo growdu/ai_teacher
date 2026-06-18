@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,22 +15,38 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 @Component
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter implements ApplicationRunner {
 
     @Autowired
     private JwtService jwtService;
 
-    // Hardcoded for testing - production should use @Value
-    private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
-        "http://localhost:80", "http://localhost:3000",
-        "http://127.0.0.1:80", "http://127.0.0.1:3000",
-        "http://43.155.143.50", "https://43.155.143.50"
-    );
+    // CORS allowed origins from environment variable
+    private static final List<String> ALLOWED_ORIGINS;
+
+    static {
+        String corsEnv = System.getenv("CORS_ALLOWED_ORIGINS");
+        if (corsEnv != null && !corsEnv.isEmpty()) {
+            ALLOWED_ORIGINS = List.of(corsEnv.split(","));
+        } else {
+            ALLOWED_ORIGINS = List.of("http://localhost:80", "http://localhost:3000");
+        }
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        // JWT secret must come from environment variable JWT_SECRET
+        String jwtSecret = System.getenv("JWT_SECRET");
+        if (jwtSecret == null || jwtSecret.isEmpty()) {
+            throw new IllegalStateException("JWT_SECRET environment variable is not set. Application refuses to start.");
+        }
+        if (jwtSecret.length() < 32) {
+            throw new IllegalStateException("JWT_SECRET must be at least 32 characters long. Current length: " + jwtSecret.length());
+        }
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)

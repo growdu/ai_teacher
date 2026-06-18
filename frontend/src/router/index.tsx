@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { useUserStore } from '@/store/userStore'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
+import Register from '@/pages/Register'
 import Dashboard from '@/pages/Dashboard'
 import KnowledgePage from '@/pages/KnowledgePage'
 import CoursePage from '@/pages/CoursePage'
@@ -9,6 +10,7 @@ import CourseDetailPage from '@/pages/CourseDetailPage'
 import MaterialPage from '@/pages/MaterialPage'
 import QuizPage from '@/pages/QuizPage'
 import SettingsPage from '@/pages/SettingsPage'
+import PricingPage from '@/pages/PricingPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token } = useUserStore()
@@ -22,6 +24,10 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
+  },
+  {
+    path: '/register',
+    element: <Register />,
   },
   {
     path: '/',
@@ -58,6 +64,10 @@ const router = createBrowserRouter([
       {
         path: 'settings',
         element: <SettingsPage />,
+      },
+      {
+        path: 'pricing',
+        element: <PricingPage />,
       },
     ],
   },

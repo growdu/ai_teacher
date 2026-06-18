@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Form, Input, Button, Card, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import request from '@/api/request'
@@ -16,6 +16,9 @@ const Login = () => {
     try {
       const res = await request.post<any, LoginResponse>('/auth/login', values)
       setToken(res.token)
+      if (res.refreshToken) {
+        localStorage.setItem('refresh-token', res.refreshToken)
+      }
       setUser({
         id: res.userId,
         username: res.username,
@@ -75,6 +78,12 @@ const Login = () => {
               登录
             </Button>
           </Form.Item>
+          <div className="text-center mt-4">
+            <span className="text-gray-500">没有账号？</span>
+            <Link to="/register" className="text-blue-500 hover:text-blue-600">
+              立即注册
+            </Link>
+          </div>
         </Form>
       </Card>
     </div>

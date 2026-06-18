@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Layout, Menu, Avatar, Dropdown } from 'antd'
-import { UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, HomeOutlined, BookOutlined, ExperimentOutlined, FolderOutlined, SettingOutlined, FileTextOutlined } from '@ant-design/icons'
+import { UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, HomeOutlined, BookOutlined, ExperimentOutlined, FolderOutlined, SettingOutlined, FileTextOutlined, CrownOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useUserStore } from '@/store/userStore'
@@ -43,6 +43,11 @@ const AppLayout = () => {
       key: '/settings',
       icon: <SettingOutlined />,
       label: '设置',
+    },
+    {
+      key: '/pricing',
+      icon: <CrownOutlined />,
+      label: '订阅套餐',
     },
   ]
 

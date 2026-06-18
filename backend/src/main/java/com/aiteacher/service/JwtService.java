@@ -21,6 +21,9 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private Long expiration;
 
+    @Value("${jwt.refresh-expiration}")
+    private Long refreshExpiration;
+
     @Value("${jwt.prefix}")
     private String prefix;
 
@@ -79,5 +82,45 @@ public class JwtService {
 
     public String getPrefix() {
         return prefix;
+    }
+
+    public String generateRefreshToken(Long userId, String username, String role, Long tenantId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("username", username);
+        claims.put("role", role);
+        claims.put("tenantId", tenantId);
+        claims.put("type", "refresh");
+
+        return Jwts.builder()
+                .claims(claims)
+                .subject(username)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + (refreshExpiration != null ? refreshExpiration : 604800000)))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String refreshAccessToken(String refreshToken) {
+        Claims claims = parseToken(refreshToken);
+        String type = claims.get("type", String.class);
+        if (!"refresh".equals(type)) {
+            throw new RuntimeException("Invalid refresh token");
+        }
+        return generateToken(
+                claims.get("userId", Long.class),
+                claims.getSubject(),
+                claims.get("role", String.class),
+                claims.get("tenantId", Long.class)
+        );
+    }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            Claims claims = parseToken(token);
+            return "refresh".equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
