@@ -55,6 +55,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
         // Always add CORS headers first — even for 403 responses
         addCorsHeaders(request, response);
 
+        // Public paths that don't require authentication
+        String path = request.getRequestURI();
+        if (isPublicPath(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -86,7 +93,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
 
     private void addCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
         String origin = request.getHeader("Origin");
-        boolean isAllowed = ALLOWED_ORIGINS.contains(origin);
+        boolean isAllowed = origin != null && ALLOWED_ORIGINS.contains(origin);
 
         response.setHeader("Access-Control-Allow-Origin", isAllowed ? origin : "");
         response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -94,5 +101,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
             "Authorization, Content-Type, X-Requested-With, Origin, Accept");
         response.setHeader("Access-Control-Allow-Credentials", "true");
         response.setHeader("Access-Control-Max-Age", "3600");
+    }
+
+    private boolean isPublicPath(String path) {
+        return path.startsWith("/api/auth/") ||
+               path.equals("/api/health") ||
+               path.startsWith("/actuator/") ||
+               path.startsWith("/swagger-ui/") ||
+               path.startsWith("/v3/api-docs") ||
+               path.startsWith("/api/payment/callback/");
     }
 }
