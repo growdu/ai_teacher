@@ -43,6 +43,9 @@ public class SecurityConfig {
                         // Public paths
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/plans/{id}").permitAll()
+                        .requestMatchers("/api/payment/channels").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()

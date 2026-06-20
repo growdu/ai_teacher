@@ -32,6 +32,8 @@ public class CustomTenantLineHandler implements com.baomidou.mybatisplus.extensi
             || "course".equals(tableName) || "teaching_material".equals(tableName)
             || "knowledge_point".equals(tableName) || "workspace".equals(tableName)
             || "resource".equals(tableName) || "ai_config".equals(tableName)
-            || "async_task".equals(tableName);
+            || "async_task".equals(tableName)
+            || "plan".equals(tableName) || "subscription".equals(tableName)
+            || "api_usage".equals(tableName) || "payment".equals(tableName);
     }
 }

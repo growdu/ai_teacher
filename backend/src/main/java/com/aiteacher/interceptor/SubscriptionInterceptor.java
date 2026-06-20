@@ -38,11 +38,13 @@ public class SubscriptionInterceptor implements HandlerInterceptor {
         "/api/auth/login",
         "/api/auth/refresh",
         "/api/health",
-        "/api/plan/list",           // 查看定价
-        "/api/payment/create",       // 发起支付
-        "/api/payment/callback",     // 支付回调
-        "/api/subscription/status",  // 订阅状态
-        "/api/subscription/upgrade"  // 升级
+        "/api/plans",
+        "/api/plans/",
+        "/api/payment/create",
+        "/api/payment/callback",
+        "/api/payment/channels",
+        "/api/subscription/status",
+        "/api/subscription/upgrade"
     };
 
     // 需要登录才能访问（免费用户可用）
