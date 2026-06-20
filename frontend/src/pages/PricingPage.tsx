@@ -44,7 +44,7 @@ const PricingPage = () => {
 
   const loadPlans = async () => {
     try {
-      const res = await request.get<any, Plan[]>('/plan/list')
+      const res = await request.get<any, Plan[]>('/plans')
       setPlans(res || [])
     } catch (error) {
       message.error('加载套餐失败')
