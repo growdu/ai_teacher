@@ -26,8 +26,21 @@ const QuizPage = () => {
   const [showModal, setShowModal] = useState(false)
   const [form] = Form.useForm()
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({})
+  const [courseOptions, setCourseOptions] = useState<{label: string; value: number}[]>([])
 
   const courseId = searchParams.get('courseId')
+
+  const loadCourses = async () => {
+    try {
+      const res = await request.get('/course/page', { params: { pageNum: 1, pageSize: 100 } }) as any
+      const records = res?.data?.records || []
+      setCourseOptions(records.map((c: any) => ({ label: c.title, value: c.id })))
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    if (showModal) loadCourses()
+  }, [showModal])
 
   const columns = [
     {
@@ -158,15 +171,14 @@ const QuizPage = () => {
             rules={[{ required: true, message: '请选择课程' }]}
           >
             <Select
+              options={courseOptions}
               placeholder="请选择课程"
               showSearch
               optionFilterProp="children"
               filterOption={(input, option) =>
-                (option?.children as any)?.props?.children?.toLowerCase?.().includes(input.toLowerCase()) ?? false
+                (option?.label as any)?.toLowerCase?.().includes(input.toLowerCase()) ?? false
               }
-            >
-              {/* loaded dynamically or use course list from context */}
-            </Select>
+            />
           </Form.Item>
           <Form.Item name="count" label="题目数量" initialValue={5}>
             <Select>

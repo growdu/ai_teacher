@@ -93,7 +93,10 @@ public class AuthService {
 
     @Transactional
     public R<LoginResponse> register(RegisterRequest request) {
-        // Check email uniqueness
+        System.out.println("=== REGISTER CALLED ===");
+        System.out.println("username: " + request.getUsername());
+        System.out.println("email: " + request.getEmail());
+        System.out.println("password length: " + (request.getPassword() != null ? request.getPassword().length() : 0));
         String checkEmailSql = "SELECT COUNT(*) FROM users WHERE email = ? AND deleted = false";
         Integer emailCount = jdbcTemplate.queryForObject(checkEmailSql, Integer.class, request.getEmail());
         if (emailCount != null && emailCount > 0) {

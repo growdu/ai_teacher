@@ -91,7 +91,18 @@ public class AsyncTaskService {
             task.setStatus("failed");
             task.setErrorMessage(errorMessage);
             task.setUpdatedAt(LocalDateTime.now());
-            
+
+            asyncTaskMapper.updateById(task);
+            cacheTask(task);
+            notifyWebSocket(task);
+        }
+    }
+
+    public void cancelTask(Long taskId) {
+        AsyncTask task = asyncTaskMapper.selectById(taskId);
+        if (task != null) {
+            task.setStatus("cancelled");
+            task.setUpdatedAt(LocalDateTime.now());
             asyncTaskMapper.updateById(task);
             cacheTask(task);
             notifyWebSocket(task);
@@ -137,7 +148,7 @@ public class AsyncTaskService {
         if (task == null) {
             return Map.of("error", "Task not found");
         }
-        
+
         Map<String, Object> status = new HashMap<>();
         status.put("taskId", task.getId());
         status.put("status", task.getStatus());
@@ -145,7 +156,16 @@ public class AsyncTaskService {
         status.put("currentStep", task.getCurrentStep());
         status.put("result", task.getResult());
         status.put("errorMessage", task.getErrorMessage());
-        
+
         return status;
+    }
+
+    public java.util.List<AsyncTask> listByTenant(Long tenantId) {
+        return asyncTaskMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AsyncTask>()
+                        .eq(AsyncTask::getTenantId, tenantId)
+                        .orderByDesc(AsyncTask::getCreatedAt)
+                        .last("LIMIT 100")
+        );
     }
 }

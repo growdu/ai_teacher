@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Layout, Menu, Avatar, Dropdown } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Button, Space } from 'antd'
 import { UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, HomeOutlined, BookOutlined, ExperimentOutlined, FolderOutlined, SettingOutlined, FileTextOutlined, CrownOutlined } from '@ant-design/icons'
+import { Link } from 'react-router-dom'
 import type { MenuProps } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useUserStore } from '@/store/userStore'
@@ -43,6 +44,16 @@ const AppLayout = () => {
       key: '/settings',
       icon: <SettingOutlined />,
       label: '设置',
+    },
+    {
+      key: '/tasks',
+      icon: <CrownOutlined />,
+      label: '任务中心',
+    },
+    {
+      key: '/workspace',
+      icon: <FolderOutlined />,
+      label: '工作空间',
     },
     {
       key: '/pricing',
@@ -96,10 +107,19 @@ const AppLayout = () => {
             )}
           </div>
           <div className="flex items-center gap-4">
-            <Dropdown menu={userMenu as MenuProps} placement="bottomRight">
-              <Avatar icon={<UserOutlined />} className="cursor-pointer" />
-            </Dropdown>
-            <span className="font-medium">{user?.username || '用户'}</span>
+            {!user?.username ? (
+              <Space>
+                <Link to="/login"><Button size="small">登录</Button></Link>
+                <Link to="/register"><Button type="primary" size="small">注册</Button></Link>
+              </Space>
+            ) : (
+              <>
+                <Dropdown menu={userMenu as MenuProps} placement="bottomRight">
+                  <Avatar icon={<UserOutlined />} className="cursor-pointer" />
+                </Dropdown>
+                <span className="font-medium">{user?.username || '用户'}</span>
+              </>
+            )}
           </div>
         </Header>
         <Content className="p-6">

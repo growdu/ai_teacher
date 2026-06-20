@@ -1,6 +1,7 @@
 package com.aiteacher.controller;
 
 import com.aiteacher.common.R;
+import com.aiteacher.config.TenantContext;
 import com.aiteacher.dto.CourseGenerateRequest;
 import com.aiteacher.dto.CourseGenerateResponse;
 import com.aiteacher.entity.Course;
@@ -25,9 +26,6 @@ public class CourseController {
     @Autowired
     private CourseMapper courseMapper;
 
-    @Autowired
-    private javax.sql.DataSource dataSource;
-
     /**
      * Generate a new course from knowledge point
      */
@@ -35,7 +33,10 @@ public class CourseController {
     public R<CourseGenerateResponse> generateCourse(
             @Valid @RequestBody CourseGenerateRequest request,
             Authentication authentication) {
-        Long userId = getUserId(authentication);
+        Long userId = TenantContext.getUserId();
+        if (userId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         CourseGenerateResponse response = courseGenerateService.generateCourse(request, userId);
         return R.ok(response);
     }
@@ -45,7 +46,10 @@ public class CourseController {
      */
     @GetMapping("/list")
     public R<List<Course>> list(Authentication authentication) {
-        Long userId = getUserId(authentication);
+        Long userId = TenantContext.getUserId();
+        if (userId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         List<Course> courses = courseGenerateService.list(
                 new LambdaQueryWrapper<Course>()
                         .eq(Course::getCreatorId, userId)
@@ -59,8 +63,7 @@ public class CourseController {
      */
     @GetMapping("/{id}")
     public R<Course> getById(@PathVariable Long id) {
-        Course course = courseGenerateService.getById(id);
-        return R.ok(course);
+        return R.ok(courseGenerateService.getById(id));
     }
 
     /**
@@ -71,7 +74,10 @@ public class CourseController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             Authentication authentication) {
-        Long userId = getUserId(authentication);
+        Long userId = TenantContext.getUserId();
+        if (userId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         Page<Course> page = new Page<>(pageNum, pageSize);
         Page<Course> result = courseGenerateService.page(page,
                 new LambdaQueryWrapper<Course>()
@@ -99,29 +105,5 @@ public class CourseController {
         course.setId(id);
         course.setDeleted(true);
         return R.ok(courseGenerateService.updateById(course));
-    }
-
-    private Long getUserId(Authentication authentication) {
-        if (authentication != null && authentication.getDetails() != null) {
-            return (Long) authentication.getDetails();
-        }
-        return 1L;
-    }
-
-    @GetMapping("/debug/all")
-    public R<Object> debugAllCourses() {
-        try {
-            java.sql.Connection conn = dataSource.getConnection();
-            java.sql.ResultSet rs = conn.createStatement().executeQuery("SELECT id, title, status FROM course");
-            StringBuilder sb = new StringBuilder();
-            while (rs.next()) {
-                sb.append(rs.getLong("id")).append(": ").append(rs.getString("title")).append(", ");
-            }
-            rs.close();
-            conn.close();
-            return R.ok(sb.toString());
-        } catch (Exception e) {
-            return R.fail(e.getMessage());
-        }
     }
 }

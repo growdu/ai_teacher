@@ -6,12 +6,15 @@ import com.aiteacher.provider.tts.TTSProvider;
 import com.aiteacher.provider.ai.ChatRequest;
 import com.aiteacher.provider.ai.ChatResponse;
 import com.aiteacher.provider.ai.VoiceConfig;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Unified AI Service - provides a simple interface for AI operations
@@ -26,12 +29,13 @@ public class AIService {
     /**
      * Send chat request to the best available LLM
      */
+    @CircuitBreaker(name = "aiProvider", fallbackMethod = "chatFallback")
     public String chat(String userMessage) {
         LLMProvider provider = providerRegistry.getBestLLMProvider();
         if (provider == null) {
             throw new RuntimeException("No LLM provider available");
         }
-        
+
         try {
             ChatRequest request = ChatRequest.of(userMessage);
             ChatResponse response = provider.chat(request);
@@ -43,14 +47,23 @@ public class AIService {
     }
 
     /**
+     * Fallback when circuit breaker is open or call fails
+     */
+    public String chatFallback(String userMessage, Throwable t) {
+        log.warn("AI chat circuit breaker triggered: {}", t.getMessage());
+        throw new RuntimeException("AI服务暂时不可用，请稍后再试。当前AI服务商负载较高。");
+    }
+
+    /**
      * Send chat request with custom messages
      */
+    @CircuitBreaker(name = "aiProvider", fallbackMethod = "chatListFallback")
     public String chat(List<com.aiteacher.provider.ai.model.ChatMessage> messages) {
         LLMProvider provider = providerRegistry.getBestLLMProvider();
         if (provider == null) {
             throw new RuntimeException("No LLM provider available");
         }
-        
+
         try {
             ChatRequest request = ChatRequest.builder()
                     .messages(messages)
@@ -63,16 +76,27 @@ public class AIService {
         }
     }
 
+    public String chatListFallback(List<com.aiteacher.provider.ai.model.ChatMessage> messages, Throwable t) {
+        log.warn("AI chat circuit breaker triggered: {}", t.getMessage());
+        throw new RuntimeException("AI服务暂时不可用，请稍后再试。");
+    }
+
     /**
      * Send chat request with full control
      */
+    @CircuitBreaker(name = "aiProvider", fallbackMethod = "chatResponseFallback")
     public ChatResponse chat(ChatRequest request) {
         LLMProvider provider = providerRegistry.getBestLLMProvider();
         if (provider == null) {
             throw new RuntimeException("No LLM provider available");
         }
-        
+
         return provider.chat(request);
+    }
+
+    public ChatResponse chatResponseFallback(ChatRequest request, Throwable t) {
+        log.warn("AI chat circuit breaker triggered: {}", t.getMessage());
+        throw new RuntimeException("AI服务暂时不可用，请稍后再试。");
     }
 
     /**
@@ -90,7 +114,7 @@ public class AIService {
         if (provider == null) {
             throw new RuntimeException("No TTS provider available");
         }
-        
+
         try {
             return provider.synthesize(text, voiceConfig);
         } catch (Exception e) {

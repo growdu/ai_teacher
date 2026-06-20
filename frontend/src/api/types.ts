@@ -8,6 +8,7 @@ export interface LoginResponse {
   username: string
   role: string
   userId: number
+  refreshToken?: string
 }
 
 export interface ApiResponse<T = any> {

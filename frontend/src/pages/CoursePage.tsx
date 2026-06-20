@@ -27,6 +27,9 @@ const CoursePage = () => {
   const [loading, setLoading] = useState(false)
   const [createModalVisible, setCreateModalVisible] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [pptTemplateModal, setPptTemplateModal] = useState(false)
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null)
+  const [pptTemplate, setPptTemplate] = useState('default')
   const [form] = Form.useForm()
   const navigate = useNavigate()
 
@@ -92,7 +95,10 @@ const CoursePage = () => {
           >
             生成测验
           </Button>
-          <Button icon={<PlayCircleOutlined />} onClick={() => handleGeneratePpt(record.id)}>
+          <Button icon={<PlayCircleOutlined />} onClick={() => {
+            setSelectedCourseId(record.id)
+            setPptTemplateModal(true)
+          }}>
             生成PPT
           </Button>
           <Button icon={<VideoCameraOutlined />} onClick={() => handleGenerateVideo(record.id)}>
@@ -138,17 +144,25 @@ const CoursePage = () => {
     }
   }
 
-  const handleGeneratePpt = async (courseId: number) => {
+  const handleGeneratePpt = async () => {
+    if (!selectedCourseId) return
+    setGenerating(true)
     try {
-      const res = await request.post('/material/ppt/generate', { courseId }) as any
+      const res = await request.post('/material/ppt/generate', {
+        courseId: selectedCourseId,
+        template: pptTemplate,
+      }) as any
       if (res.code === 200) {
         message.success('PPT生成成功')
+        setPptTemplateModal(false)
         loadData()
       } else {
         message.error(res.message || 'PPT生成失败')
       }
     } catch (error) {
       message.error('PPT生成失败')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -306,8 +320,44 @@ const CoursePage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
-  )
-}
 
-export default CoursePage
+      <Modal
+        title="选择PPT模板"
+        open={pptTemplateModal}
+        onOk={handleGeneratePpt}
+        confirmLoading={generating}
+        onCancel={() => setPptTemplateModal(false)}
+        width={480}
+      >
+        <div className="py-4">
+          <p className="mb-3 text-gray-500">选择配色风格：</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: 'default',  label: '学院蓝', color: '#1F4E79', desc: '经典专业' },
+              { value: 'elegant',  label: '典雅绿', color: '#1A4731', desc: '沉稳典雅' },
+              { value: 'minimal',  label: '简约白', color: '#2C3E50', desc: '简洁现代' },
+              { value: 'vibrant',  label: '活力橙', color: '#E67E22', desc: '活泼鲜明' },
+            ].map(t => (
+              <div
+                key={t.value}
+                onClick={() => setPptTemplate(t.value)}
+                className={`cursor-pointer rounded-lg border-2 p-3 flex items-center gap-3 transition-all ${
+                  pptTemplate === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'
+                }`}
+              >
+                <div className="w-10 h-10 rounded" style={{ backgroundColor: t.color }} />
+                <div>
+                  <div className="font-medium text-sm">{t.label}</div>
+                  <div className="text-xs text-gray-400">{t.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+    </div>
+  );
+};
+
+export default CoursePage;

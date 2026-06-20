@@ -48,6 +48,23 @@ CREATE TABLE IF NOT EXISTS api_usage (
 );
 
 -- =====================================================
+-- 3b. Payment 表 - 支付交易记录
+-- =====================================================
+CREATE TABLE IF NOT EXISTS payment (
+    id BIGSERIAL PRIMARY KEY,
+    trade_no VARCHAR(64) NOT NULL UNIQUE,         -- AITS-{tenantId}-yyyyMMddHHmmss-{uuid}
+    tenant_id BIGINT NOT NULL,
+    plan_id BIGINT NOT NULL,
+    channel VARCHAR(16) NOT NULL,                 -- alipay / wechat
+    status VARCHAR(16) NOT NULL DEFAULT 'pending', -- pending / paid / failed / expired
+    paid_at VARCHAR(32),                          -- ISO timestamp when paid
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT fk_payment_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
+    CONSTRAINT fk_payment_plan FOREIGN KEY (plan_id) REFERENCES plan(id)
+);
+
+-- =====================================================
 -- 4. 修改 tenant 表 - 注释掉 plan 字段(改用 subscription 表)
 -- =====================================================
 -- ALTER TABLE tenant DROP COLUMN IF EXISTS plan;
@@ -117,3 +134,6 @@ CREATE INDEX IF NOT EXISTS idx_subscription_plan ON subscription(plan_id);
 CREATE INDEX IF NOT EXISTS idx_subscription_status ON subscription(status);
 CREATE INDEX IF NOT EXISTS idx_api_usage_tenant ON api_usage(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_api_usage_month ON api_usage(year_month);
+CREATE INDEX IF NOT EXISTS idx_payment_trade_no ON payment(trade_no);
+CREATE INDEX IF NOT EXISTS idx_payment_tenant ON payment(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payment_status ON payment(status);

@@ -41,6 +41,17 @@ const Dashboard = () => {
 
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
+      // Demo data when not logged in
+      setRecentCourses([
+        { id: 1, title: 'Python机器学习实战', status: 'generated', createdAt: '2024-01-15' },
+        { id: 2, title: '深度学习入门指南', status: 'generated', createdAt: '2024-01-12' },
+        { id: 3, title: '数据结构与算法', status: 'draft', createdAt: '2024-01-10' },
+      ])
+      setRecentMaterials([
+        { id: 1, title: '机器学习PPT课件', materialType: 'ppt', status: 'generated' },
+        { id: 2, title: '深度学习视频教程', materialType: 'video', status: 'generated' },
+      ])
+      setStats({ courseCount: 12, knowledgeCount: 156, materialCount: 28, activeTaskCount: 5 })
     } finally {
       setLoading(false)
     }

@@ -1,12 +1,12 @@
 package com.aiteacher.controller;
 
 import com.aiteacher.common.R;
+import com.aiteacher.config.TenantContext;
 import com.aiteacher.entity.Resource;
 import com.aiteacher.service.ResourceService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,18 +22,22 @@ public class ResourceController {
     @PostMapping("/upload")
     public R<Resource> upload(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(required = false) Long workspaceId,
-            Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
+            @RequestParam(required = false) Long workspaceId) {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         return R.ok(resourceService.upload(file, workspaceId, tenantId));
     }
 
     @GetMapping("/list")
     public R<List<Resource>> list(
             @RequestParam(required = false) Long workspaceId,
-            @RequestParam(required = false) String resourceType,
-            Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
+            @RequestParam(required = false) String resourceType) {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         LambdaQueryWrapper<Resource> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Resource::getTenantId, tenantId);
         if (workspaceId != null) wrapper.eq(Resource::getWorkspaceId, workspaceId);
@@ -46,9 +50,11 @@ public class ResourceController {
     public R<Page<Resource>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String resourceType,
-            Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
+            @RequestParam(required = false) String resourceType) {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         Page<Resource> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Resource> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Resource::getTenantId, tenantId);
@@ -65,9 +71,5 @@ public class ResourceController {
     @DeleteMapping("/{id}")
     public R<Boolean> delete(@PathVariable Long id) {
         return R.ok(resourceService.delete(id));
-    }
-
-    private Long getTenantId(Authentication authentication) {
-        return 1L;
     }
 }

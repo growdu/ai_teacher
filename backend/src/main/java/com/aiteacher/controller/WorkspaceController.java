@@ -1,6 +1,7 @@
 package com.aiteacher.controller;
 
 import com.aiteacher.common.R;
+import com.aiteacher.config.TenantContext;
 import com.aiteacher.entity.Workspace;
 import com.aiteacher.service.WorkspaceService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -19,15 +20,21 @@ public class WorkspaceController {
     private WorkspaceService workspaceService;
 
     @PostMapping
-    public R<Workspace> create(@RequestBody Workspace workspace, Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
+    public R<Workspace> create(@RequestBody Workspace workspace) {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         workspace.setTenantId(tenantId);
         return R.ok(workspaceService.create(workspace));
     }
 
     @GetMapping("/list")
-    public R<List<Workspace>> list(Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
+    public R<List<Workspace>> list() {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         return R.ok(workspaceService.list(
                 new LambdaQueryWrapper<Workspace>()
                         .eq(Workspace::getTenantId, tenantId)
@@ -39,9 +46,11 @@ public class WorkspaceController {
     @GetMapping("/page")
     public R<Page<Workspace>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new com.aiteacher.exception.BusinessException(401, "未授权");
+        }
         Page<Workspace> page = new Page<>(pageNum, pageSize);
         return R.ok(workspaceService.page(page,
                 new LambdaQueryWrapper<Workspace>()
@@ -65,9 +74,5 @@ public class WorkspaceController {
     @DeleteMapping("/{id}")
     public R<Boolean> delete(@PathVariable Long id) {
         return R.ok(workspaceService.delete(id));
-    }
-
-    private Long getTenantId(Authentication authentication) {
-        return 1L;
     }
 }

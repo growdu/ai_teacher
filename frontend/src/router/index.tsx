@@ -11,6 +11,9 @@ import MaterialPage from '@/pages/MaterialPage'
 import QuizPage from '@/pages/QuizPage'
 import SettingsPage from '@/pages/SettingsPage'
 import PricingPage from '@/pages/PricingPage'
+import LandingPage from '@/pages/LandingPage'
+import TasksPage from '@/pages/TasksPage'
+import WorkspacePage from '@/pages/WorkspacePage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token } = useUserStore()
@@ -21,14 +24,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 }
 
 const router = createBrowserRouter([
-  {
-    path: '/login',
-    element: <Login />,
-  },
-  {
-    path: '/register',
-    element: <Register />,
-  },
   {
     path: '/',
     element: (
@@ -66,10 +61,26 @@ const router = createBrowserRouter([
         element: <SettingsPage />,
       },
       {
+        path: 'tasks',
+        element: <TasksPage />,
+      },
+      {
+        path: 'workspace',
+        element: <WorkspacePage />,
+      },
+      {
         path: 'pricing',
         element: <PricingPage />,
       },
     ],
+  },
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    path: '/register',
+    element: <Register />,
   },
 ])
 

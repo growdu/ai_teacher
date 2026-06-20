@@ -1,6 +1,7 @@
 package com.aiteacher.controller;
 
 import com.aiteacher.common.R;
+import com.aiteacher.config.TenantContext;
 import com.aiteacher.entity.KnowledgePoint;
 import com.aiteacher.service.KnowledgePointService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -19,9 +20,9 @@ public class KnowledgePointController {
 
     @GetMapping("/list")
     public R<List<KnowledgePoint>> list(
-            @RequestParam(required = false) Long tenantId,
             @RequestParam(required = false) String subject,
             @RequestParam(required = false) String grade) {
+        Long tenantId = TenantContext.getTenantId();
         LambdaQueryWrapper<KnowledgePoint> wrapper = new LambdaQueryWrapper<>();
         if (tenantId != null) wrapper.eq(KnowledgePoint::getTenantId, tenantId);
         if (subject != null) wrapper.eq(KnowledgePoint::getSubject, subject);
@@ -34,10 +35,14 @@ public class KnowledgePointController {
     public R<Page<KnowledgePoint>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) Long tenantId) {
+            @RequestParam(required = false) String subject,
+            @RequestParam(required = false) String grade) {
+        Long tenantId = TenantContext.getTenantId();
         Page<KnowledgePoint> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<KnowledgePoint> wrapper = new LambdaQueryWrapper<>();
         if (tenantId != null) wrapper.eq(KnowledgePoint::getTenantId, tenantId);
+        if (subject != null) wrapper.eq(KnowledgePoint::getSubject, subject);
+        if (grade != null) wrapper.eq(KnowledgePoint::getGrade, grade);
         wrapper.orderByDesc(KnowledgePoint::getCreatedAt);
         return R.ok(knowledgePointService.page(page, wrapper));
     }
@@ -49,8 +54,9 @@ public class KnowledgePointController {
 
     @PostMapping
     public R<Boolean> create(@RequestBody KnowledgePoint knowledgePoint) {
-        if (knowledgePoint.getTenantId() == null) {
-            knowledgePoint.setTenantId(1L);
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId != null) {
+            knowledgePoint.setTenantId(tenantId);
         }
         return R.ok(knowledgePointService.save(knowledgePoint));
     }
