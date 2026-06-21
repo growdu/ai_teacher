@@ -57,8 +57,13 @@ public class PaymentService {
 
     // WeChat Pay API base URL
     private static final String WECHAT_PAY_BASE = "https://api.mch.weixin.qq.com/v3";
-    // Alipay API base URL
-    private static final String ALIPAY_BASE = "https://open.alipayapi.com";
+    // Alipay API base URLs
+    private static final String ALIPAY_SANDBOX_GATEWAY = "https://openapi-sandbox.dl.alipaydev.com/gateway.do";
+    private static final String ALIPAY_PRODUCTION_GATEWAY = "https://open.alipayapi.com/gateway.do";
+    // Alipay OpenAPI version
+    private static final String ALIPAY_FORMAT = "JSON";
+    private static final String ALIPAY_VERSION = "1.0";
+    private static final String ALIPAY_SIGN_TYPE = "RSA2";
 
     @PostConstruct
     public void init() {
@@ -130,22 +135,23 @@ public class PaymentService {
             // Alipay uses yuan (not cents), and expects decimal string
             double amount = amountCents / 100.0;
 
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("outTradeNo", outTradeNo);
-            requestBody.put("totalAmount", String.format("%.2f", amount));
+            Map<String, Object> requestBody = new LinkedHashMap<>();
+            requestBody.put("out_trade_no", outTradeNo);
+            requestBody.put("total_amount", String.format("%.2f", amount));
             requestBody.put("subject", subject);
-            requestBody.put("productCode", "FAST_INSTANT_TRADE_PAY");
-            requestBody.put("timeoutExpress", "1h");
+            requestBody.put("product_code", "FAST_INSTANT_TRADE_PAY");
+            requestBody.put("timeout_express", "1h");
+            requestBody.put("notify_url", paymentConfig.getAlipayNotifyUrl());
 
             ObjectNode bizContent = objectMapper.valueToTree(requestBody);
 
-            Map<String, String> response = callAlipayAPI("POST", "/api/v1/alipay/trade/page/pay",
-                    bizContent.toString());
+            Map<String, String> response = callAlipayAPI("alipay.trade.page.pay", bizContent.toString());
 
             Map<String, String> result = new HashMap<>();
             result.put("channel", "alipay");
             result.put("tradeNo", outTradeNo);
-            result.put("paymentUrl", response.getOrDefault("trade_no", ""));
+            // alipay.trade.page.pay returns a form HTML string — extract the paymentUrl from response
+            result.put("paymentUrl", response.getOrDefault("form", response.getOrDefault("trade_no", "")));
             result.put("expiresAt", Instant.now().plusSeconds(3600).toString());
             return result;
 
@@ -262,7 +268,7 @@ public class PaymentService {
 
     // ========== HTTP Call Helpers ==========
 
-    private Map<String, String> callAlipayAPI(String method, String path, String bizContent) {
+    private Map<String, String> callAlipayAPI(String method, String bizContent) {
         if (paymentConfig.getAlipayAppId() == null || paymentConfig.getAlipayAppId().isEmpty()) {
             throw new BusinessException("支付宝未配置（ALIPAY_APP_ID 为空）");
         }
@@ -271,19 +277,41 @@ public class PaymentService {
             long timestamp = System.currentTimeMillis() / 1000;
             String nonceStr = UUID.randomUUID().toString().replace("-", "");
 
-            // Build signing string
-            String signData = method + "\n" + path + "\n" + timestamp + "\n" + nonceStr + "\n" + bizContent + "\n";
-            String signature = signAlipay(signData, paymentConfig.getAlipayPrivateKey());
+            // Choose gateway: sandbox or production
+            String gateway = (paymentConfig.isSandboxEnabled()
+                    || "sandbox".equalsIgnoreCase(paymentConfig.getEnvironment()))
+                    ? ALIPAY_SANDBOX_GATEWAY
+                    : ALIPAY_PRODUCTION_GATEWAY;
 
-            String authHeader = "Bearer " + paymentConfig.getAlipayAppId() + ":" + signature;
+            // Alipay RSA2 sign: sign_string = biz_content (just the JSON body)
+            String signature = signAlipay(bizContent, paymentConfig.getAlipayPrivateKey());
 
+            // Build Authorization header: Alipay auth is "app_id:signature"
+            String authHeader = paymentConfig.getAlipayAppId() + ":" + signature;
+
+            // Build query string params for GET-style param passing (Alipay OpenAPI pattern)
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("app_id=").append(paymentConfig.getAlipayAppId());
+            queryBuilder.append("&method=").append(method);
+            queryBuilder.append("&timestamp=").append(timestamp);
+            queryBuilder.append("&biz_content=").append(java.net.URLEncoder.encode(bizContent, StandardCharsets.UTF_8));
+            queryBuilder.append("&sign_type=").append(ALIPAY_SIGN_TYPE);
+            queryBuilder.append("&version=").append(ALIPAY_VERSION);
+            queryBuilder.append("&format=").append(ALIPAY_FORMAT);
+            queryBuilder.append("&notify_url=").append(paymentConfig.getAlipayNotifyUrl() != null
+                    ? java.net.URLEncoder.encode(paymentConfig.getAlipayNotifyUrl(), StandardCharsets.UTF_8) : "");
+            queryBuilder.append("&charset=").append("UTF-8");
+            queryBuilder.append("&sign=").append(java.net.URLEncoder.encode(signature, StandardCharsets.UTF_8));
+            queryBuilder.append("&sdk_version=").append("1.0");
+
+            // For alipay.trade.page.pay, we need to POST with these params as query string
             String response = webClient.post()
-                    .uri(ALIPAY_BASE + path)
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .uri(gateway + "?" + queryBuilder.toString())
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .header("Authorization", authHeader)
                     .header("X-Ca-Timestamp", String.valueOf(timestamp))
                     .header("X-Ca-Nonce", nonceStr)
-                    .bodyValue(bizContent)
+                    .bodyValue("")  // empty body, params in query string
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
@@ -291,8 +319,17 @@ public class PaymentService {
             Map<String, String> result = new HashMap<>();
             result.put("response", response != null ? response : "");
             if (response != null) {
+                // alipay.trade.page.pay returns { "alipay_trade_page_pay_response": { "trade_no": "...", "form": "..." } }
                 JsonNode node = objectMapper.readTree(response);
-                if (node.has("trade_no")) result.put("trade_no", node.get("trade_no").asText());
+                JsonNode respNode = node.has(method + "_response")
+                        ? node.get(method + "_response")
+                        : node;
+                if (respNode.has("trade_no")) result.put("trade_no", respNode.get("trade_no").asText());
+                if (respNode.has("form")) result.put("form", respNode.get("form").asText());
+                if (respNode.has("msg")) result.put("msg", respNode.get("msg").asText());
+                if (respNode.has("code") && !"10000".equals(respNode.get("code").asText())) {
+                    log.warn("Alipay API error: {} - {}", respNode.get("code"), respNode.get("msg"));
+                }
             }
             return result;
 

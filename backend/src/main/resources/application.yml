@@ -69,6 +69,7 @@ task:
 payment:
   enabled: ${PAYMENT_ENABLED:false}
   environment: ${PAYMENT_ENVIRONMENT:production}
+  sandbox-enabled: ${ALIPAY_SANDBOX_ENABLED:false}
   # Alipay
   alipay-app-id: ${ALIPAY_APP_ID:}
   alipay-private-key: ${ALIPAY_PRIVATE_KEY:}

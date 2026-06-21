@@ -24,18 +24,17 @@ log "PostgreSQL 备份完成: ${BACKUP_DIR}/postgres_${TIMESTAMP}.sql"
 
 # 2. MinIO 对象存储备份
 log "备份 MinIO 数据..."
-MINIO_DATA=$(docker inspect ai-teacher-minio --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' 2>/dev/null || echo "")
-if [ -n "${MINIO_DATA}" ] && [ -d "${MINIO_DATA}" ]; then
-  tar czf "${BACKUP_DIR}/minio_${TIMESTAMP}.tar.gz" -C "${MINIO_DATA}" . 2>> "${LOG_FILE}"
-  log "MinIO 备份完成: ${BACKUP_DIR}/minio_${TIMESTAMP}.tar.gz"
-else
-  log "警告: MinIO 数据目录未找到，跳过 MinIO 备份"
-fi
+docker exec ai-teacher-minio tar czf - -C /data . > "${BACKUP_DIR}/minio_${TIMESTAMP}.tar.gz" 2>> "${LOG_FILE}"
+log "MinIO 备份完成: ${BACKUP_DIR}/minio_${TIMESTAMP}.tar.gz"
 
 # 3. 备份 .env 和敏感配置
 log "备份配置文件..."
-cp "${BACKUP_DIR}/.env.backup_${TIMESTAMP}" "/home/ubuntu/ai_teacher/.env" 2>/dev/null || true
-log "配置文件备份完成"
+if [ -f "/home/ubuntu/ai_teacher/.env" ]; then
+  cp "/home/ubuntu/ai_teacher/.env" "${BACKUP_DIR}/.env.backup_${TIMESTAMP}"
+  log "配置文件备份完成: ${BACKUP_DIR}/.env.backup_${TIMESTAMP}"
+else
+  log "警告: .env 文件不存在，跳过"
+fi
 
 # 4. 清理超过 7 天的备份
 log "清理超过 7 天的旧备份..."

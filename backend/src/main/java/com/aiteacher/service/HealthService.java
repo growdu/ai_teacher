@@ -1,5 +1,13 @@
 package com.aiteacher.service;
 
+import com.aiteacher.dto.HealthStatus;
+
+import java.util.Map;
+
 public interface HealthService {
-    String check();
+    HealthStatus checkAll();
+    HealthStatus.ComponentHealth checkDatabase();
+    HealthStatus.ComponentHealth checkRedis();
+    HealthStatus.ComponentHealth checkMinIO();
+    Map<String, HealthStatus.ComponentHealth> checkAIProviders();
 }

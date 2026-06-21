@@ -77,7 +77,7 @@ MINIO_ROOT_PASSWORD=your_secure_minio_password
 JWT_SECRET=your_secure_jwt_secret_at_least_32_characters_long
 
 # ===================
-# AI API Keys (Configure at least one to enable AI features)
+### AI API Keys (Configure at least one to enable AI features)
 # ===================
 AI_OPENAI_API_KEY=sk-you...-key
 AI_CLAUDE_API_KEY=sk-ant...-key
@@ -90,6 +90,29 @@ AI_MINIMAX_VIDEO_API_KEY=your-minimax-video-api-key
 # ===================
 ALIYUN_TTS_ACCESS_KEY=your-aliyun-access-key
 ALIYUN_TTS_ACCESS_SECRET=your-aliyun-access-secret
+
+# ===================
+# Payment Configuration (Optional)
+# ===================
+# Set PAYMENT_ENABLED=true only after configuring payment providers
+PAYMENT_ENABLED=false
+PAYMENT_ENVIRONMENT=sandbox
+
+# Alipay (get from https://open.alipay.com)
+ALIPAY_APP_ID=your-alipay-app-id
+ALIPAY_PRIVATE_KEY=your-rsa2-private-key-pkcs8-base64
+ALIPAY_PUBLIC_KEY=alipay-rsa2-public-key-base64
+ALIPAY_NOTIFY_URL=https://your-domain.com/api/payment/callback/alipay
+ALIPAY_RETURN_URL=https://your-domain.com/pricing
+ALIPAY_SANDBOX_ENABLED=true
+
+# WeChat Pay (get from https://pay.weixin.qq.com)
+WECHAT_MCH_ID=your-wechat-merchant-id
+WECHAT_SERIAL_NO=your-wechat-certificate-serial-no
+WECHAT_PRIVATE_KEY=your-wechat-rsa-private-key-pkcs8-base64
+WECHAT_API_V3_KEY=your-wechat-api-v3-key
+WECHAT_NOTIFY_URL=https://your-domain.com/api/payment/callback/wechat
+WECHAT_APP_ID=your-wechat-app-id
 EOF
 ```
 
@@ -416,57 +439,55 @@ The backend has full access to the bucket. For production, consider using IAM po
 
 ## SSL/HTTPS Configuration
 
-### Option 1: Nginx Reverse Proxy with SSL
+### Let's Encrypt (Recommended)
 
-Create `/etc/nginx/sites-available/ai-teacher`:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name your-domain.com;
-
-    ssl_certificate /path/to/fullchain.pem;
-    ssl_certificate_key /path/to/privkey.pem;
-
-    # Frontend
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:8080/api/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    # Swagger UI
-    location /swagger-ui/ {
-        proxy_pass http://localhost:8080/swagger-ui/;
-        proxy_set_header Host $host;
-    }
-}
-```
-
-Enable the site:
+The project includes automated Let's Encrypt certificate management:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/ai-teacher /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+# 1. Request a certificate
+LETSENCRYPT_EMAIL=your@email.com DOMAIN=your-domain.com ./scripts/letsencrypt.sh obtain
+
+# 2. Enable automatic renewal
+sudo cp deploy/nginx/letsencrypt-renew.service /etc/systemd/system/
+sudo cp deploy/nginx/letsencrypt-renew.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now letsencrypt-renew.timer
+
+# 3. Verify HTTPS is working
+curl -k https://your-domain.com/api/health/detailed
 ```
 
-### Option 2: Docker with SSL
+Certificate files are stored in `deploy/ssl/` and mounted to the Nginx container.
 
-Modify `docker-compose.yml` to use a reverse proxy container like `jwilder/nginx-proxy` with Let's Encrypt.
+### Manual SSL Certificate
+
+If you have existing SSL certificates:
+
+1. Place certificate files in `deploy/ssl/`:
+   ```
+   deploy/ssl/fullchain.pem   # Certificate + intermediates
+   deploy/ssl/privkey.pem      # Private key
+   ```
+
+2. The Nginx container mounts `deploy/ssl/` to `/etc/nginx/ssl/`
+
+3. Ensure `deploy/nginx/nginx.conf` HTTPS server block is enabled (uncommented)
+
+### HTTPS Behavior
+
+- **With certificate**: Nginx serves HTTPS on port 443, HTTP redirects to HTTPS on port 80
+- **Without certificate**: HTTP only (port 80), HTTPS block will fail gracefully
+
+### Certificate Renewal
+
+The included timer runs twice daily at 03:00 and 15:00. If a certificate is renewed, Nginx is automatically reloaded.
+
+### Verify Certificate
+
+```bash
+# Check certificate expiry
+openssl s_client -connect your-domain.com:443 -servername your-domain.com </dev/null 2>/dev/null | openssl x509 -noout -dates
+```
 
 ---
 
@@ -528,8 +549,17 @@ crontab -e
 ### Health Checks
 
 ```bash
-# Backend health
+# Overall backend health (via Actuator)
 curl http://localhost:8080/actuator/health
+
+# Detailed health (all components: DB, Redis, MinIO, AI Providers)
+curl http://localhost/api/health/detailed
+
+# Individual component health
+curl http://localhost/api/health/database
+curl http://localhost/api/health/redis
+curl http://localhost/api/health/minio
+curl http://localhost/api/health/ai-providers
 
 # Docker health
 docker ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
@@ -614,7 +644,7 @@ docker-compose exec backend ffmpeg -version
 docker-compose exec backend env | grep API_KEY
 
 # Test API key validity
-curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models
+curl -H "Authorization: Bearer $API_KEY" https://api.openai.com/v1/models
 ```
 
 #### 6. Frontend Shows Blank Page
@@ -627,6 +657,48 @@ docker-compose logs frontend
 # - Build failed
 # - Static files not found
 # - API proxy misconfiguration
+```
+
+#### 7. Payment Not Working (Stub Mode)
+
+If `PAYMENT_ENABLED=false` or credentials are missing, payment UI shows "演示模式":
+
+```bash
+# Enable payment
+# 1. Set PAYMENT_ENABLED=true in .env
+# 2. Configure Alipay credentials (ALIPAY_APP_ID, ALIPAY_PRIVATE_KEY, etc.)
+# 3. Configure WeChat Pay credentials (WECHAT_MCH_ID, WECHAT_PRIVATE_KEY, etc.)
+# 4. Restart: docker-compose up -d backend
+
+# Test with sandbox first:
+ALIPAY_SANDBOX_ENABLED=true
+```
+
+#### 8. API Quota Exceeded (HTTP 402)
+
+Users see "API配额已用完" error when their monthly AI API calls exceed the plan limit:
+
+```bash
+# Check current usage for a tenant
+curl -H "Authorization: Bearer $TOKEN" http://localhost/api/subscription/current
+
+# Plan quotas:
+# - Free: 100 calls/month
+# - Pro: 1000 calls/month
+# - Enterprise: unlimited (-1)
+```
+
+#### 9. All Health Checks Failing
+
+```bash
+# Check each component individually
+curl http://localhost/api/health/detailed | jq .
+
+# Common causes:
+# - Database: PostgreSQL not running or credentials wrong
+# - Redis: Redis not running or password wrong
+# - MinIO: MinIO not running or endpoint wrong
+# - AI Providers: No valid API keys configured
 ```
 
 ### Debug Mode

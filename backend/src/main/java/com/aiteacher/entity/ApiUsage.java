@@ -16,6 +16,16 @@ public class ApiUsage {
     
     private Integer callCount;
     
+    // 新增：追踪AI Provider使用详情
+    private String providerName;  // e.g., "openai", "claude", "qwen"
+    
+    private String model;        // e.g., "gpt-4", "claude-3-5-sonnet"
+    
+    private String apiType;       // e.g., "chat", "embedding", "tts", "video"
+    
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
+    
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
 }

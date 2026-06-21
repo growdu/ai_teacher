@@ -31,4 +31,5 @@ public class PaymentConfig {
     // ========== Common ==========
     private boolean enabled = false;
     private String environment = "production"; // "production" or "sandbox"
+    private boolean sandboxEnabled = false; // alias for environment=sandbox
 }

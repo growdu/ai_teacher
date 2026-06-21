@@ -43,6 +43,11 @@ public class SecurityConfig {
                         // Public paths
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
+                        .requestMatchers("/api/health/detailed").permitAll()
+                        .requestMatchers("/api/health/database").permitAll()
+                        .requestMatchers("/api/health/redis").permitAll()
+                        .requestMatchers("/api/health/minio").permitAll()
+                        .requestMatchers("/api/health/ai-providers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/plans").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/plans/{id}").permitAll()
                         .requestMatchers("/api/payment/channels").permitAll()
