@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Tag, Spin, Descriptions, Collapse, message, Space } from 'antd'
-import { ArrowLeftOutlined, FileTextOutlined } from '@ant-design/icons'
+import { Card, Button, Tag, Spin, Descriptions, Collapse, message, Space, Modal } from 'antd'
+import { ArrowLeftOutlined, FileTextOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import request from '@/api/request'
 
 interface Course {
@@ -34,6 +34,9 @@ const CourseDetailPage = () => {
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [outlineData, setOutlineData] = useState<Outline | null>(null)
+  const [videoModalVisible, setVideoModalVisible] = useState(false)
+  const [videoScript, setVideoScript] = useState('')
+  const [generatingVideo, setGeneratingVideo] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -65,6 +68,24 @@ const CourseDetailPage = () => {
       navigate('/course')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGenerateVideo = async () => {
+    if (!course) return
+    setGeneratingVideo(true)
+    try {
+      const res = await request.post<any, { data: number }>('/video/generate', {
+        courseId: course.id,
+        script: videoScript || course.script,
+      })
+      message.success('视频生成任务已创建，请在任务列表中查看进度')
+      setVideoModalVisible(false)
+      navigate('/tasks')
+    } catch (error: any) {
+      message.error(error.response?.data?.message || '视频生成失败')
+    } finally {
+      setGeneratingVideo(false)
     }
   }
 
@@ -102,6 +123,15 @@ const CourseDetailPage = () => {
               onClick={() => navigate(`/quiz?courseId=${course.id}`)}
             >
               生成测验
+            </Button>
+            <Button
+              icon={<VideoCameraOutlined />}
+              onClick={() => {
+                setVideoScript(course.script || '')
+                setVideoModalVisible(true)
+              }}
+            >
+              生成视频
             </Button>
           </Space>
         }
@@ -171,6 +201,48 @@ const CourseDetailPage = () => {
           </div>
         )}
       </Card>
+
+      <Modal
+        title="生成教学视频"
+        open={videoModalVisible}
+        onCancel={() => setVideoModalVisible(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <div className="py-4">
+          <p className="mb-4 text-gray-500">
+            使用课程讲稿脚本生成教学视频。如需自定义脚本内容，可在下方的文本框中编辑。
+          </p>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>讲稿脚本</label>
+            <textarea
+              rows={8}
+              style={{
+                width: '100%',
+                border: '1px solid #d9d9d9',
+                borderRadius: 6,
+                padding: 8,
+                fontSize: 14,
+                resize: 'vertical',
+              }}
+              value={videoScript}
+              onChange={e => setVideoScript(e.target.value)}
+              placeholder="输入或编辑视频讲稿脚本..."
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button onClick={() => setVideoModalVisible(false)}>取消</Button>
+            <Button
+              type="primary"
+              icon={<VideoCameraOutlined />}
+              loading={generatingVideo}
+              onClick={handleGenerateVideo}
+            >
+              开始生成视频
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
