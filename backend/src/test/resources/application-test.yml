@@ -1,4 +1,4 @@
-# Test configuration — injects values without needing .env
+# Test configuration — uses real PostgreSQL/Redis/MinIO from Docker Compose
 jwt:
   secret: test-jwt-secret-at-least-32-characters-long-for-hs256
   expiration: 86400000
@@ -8,40 +8,41 @@ jwt:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ai_teacher_test
+    url: jdbc:postgresql://localhost:5432/ai_teacher
     username: postgres
-    password: test
+    password: ai_tea...2024
   data:
     redis:
       host: localhost
       port: 6379
-      password: test
+      password: ""
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+  main:
+    allow-bean-definition-overriding: true
 
-# Disable external services for unit tests
-payment:
-  enabled: false
-  sandbox-enabled: false
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket-name: ai-teacher
+  secure: false
 
-# Test AI keys (empty but present)
+# AI Provider test keys
 ai:
+  doubao:
+    api-key: test
+    endpoint: https://ark.cn-beijing.volces.com/api/v3
+  deepseek:
+    api-key: test
   openai:
     api-key: test
     base-url: https://api.openai.com
-  claude:
-    api-key: test
-    base-url: https://api.anthropic.com
 
-# MinIO test config
-minio:
-  endpoint: http://localhost:9000
-  access-key: test
-  secret-key: test
-  bucket-name: ai-teacher-test
-  secure: false
-
-# Disable mandatory checks
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
+# Disable unnecessary auto-config for tests
+payment:
+  enabled: false
+  sandbox-enabled: false

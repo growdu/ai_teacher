@@ -10,9 +10,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -25,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class AuthControllerTest {
 
     @Autowired
@@ -38,18 +38,18 @@ class AuthControllerTest {
 
     @Test
     void login_withValidCredentials_shouldReturnToken() throws Exception {
-        LoginRequest request = LoginRequest.builder()
-                .username("testuser")
-                .password("password123")
-                .build();
+        LoginRequest request = new LoginRequest();
+        request.setUsername("testuser");
+        request.setPassword("password123");
+
+        com.aiteacher.dto.LoginResponse loginResponse = new com.aiteacher.dto.LoginResponse();
+        loginResponse.setToken("mock-jwt-token");
+        loginResponse.setUsername("testuser");
+        loginResponse.setUserId(1L);
+        loginResponse.setRole("user");
 
         when(authService.login(any(LoginRequest.class)))
-                .thenReturn(com.aiteacher.common.R.ok(Map.of(
-                        "token", "mock-jwt-token",
-                        "username", "testuser",
-                        "userId", 1L,
-                        "role", "user"
-                )));
+                .thenReturn(com.aiteacher.common.R.ok(loginResponse));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -61,9 +61,8 @@ class AuthControllerTest {
 
     @Test
     void login_withMissingUsername_shouldReturn400() throws Exception {
-        LoginRequest request = LoginRequest.builder()
-                .password("password123")
-                .build();
+        LoginRequest request = new LoginRequest();
+        request.setPassword("password123");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,19 +72,19 @@ class AuthControllerTest {
 
     @Test
     void register_withValidRequest_shouldReturnToken() throws Exception {
-        RegisterRequest request = RegisterRequest.builder()
-                .username("newuser")
-                .password("password123")
-                .email("newuser@example.com")
-                .build();
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("newuser");
+        request.setPassword("password123");
+        request.setEmail("newuser@example.com");
+
+        com.aiteacher.dto.LoginResponse loginResponse = new com.aiteacher.dto.LoginResponse();
+        loginResponse.setToken("mock-jwt-token-new");
+        loginResponse.setUsername("newuser");
+        loginResponse.setUserId(2L);
+        loginResponse.setRole("user");
 
         when(authService.register(any(RegisterRequest.class)))
-                .thenReturn(com.aiteacher.common.R.ok(Map.of(
-                        "token", "mock-jwt-token-new",
-                        "username", "newuser",
-                        "userId", 2L,
-                        "role", "user"
-                )));
+                .thenReturn(com.aiteacher.common.R.ok(loginResponse));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

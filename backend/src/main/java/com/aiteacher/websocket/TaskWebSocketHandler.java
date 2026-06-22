@@ -1,9 +1,7 @@
 package com.aiteacher.websocket;
 
-import com.aiteacher.service.AsyncTaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -20,9 +18,6 @@ public class TaskWebSocketHandler extends TextWebSocketHandler {
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, String> taskSubscriptions = new ConcurrentHashMap<>();
-
-    @Autowired
-    private AsyncTaskService asyncTaskService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

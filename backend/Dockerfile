@@ -23,9 +23,11 @@ COPY --from=builder /app/target/*.jar app.jar
 # Copy PPT generation scripts
 COPY scripts/ ./scripts/
 
-# Install Node.js for PPT generation script (pre-built binary, no apt needed)
+# Install FFmpeg (for video generation) and Node.js for PPT generation
 RUN curl -fsSL https://nodejs.org/dist/v20.17.0/node-v20.17.0-linux-x64.tar.gz | tar -xz -C /usr/local --strip-components=1 && \
-    npm install -g pptxgenjs
+    npm install -g pptxgenjs && \
+    apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 
 # Expose port
 EXPOSE 8080

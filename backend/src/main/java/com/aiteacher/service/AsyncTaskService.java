@@ -6,6 +6,7 @@ import com.aiteacher.websocket.TaskWebSocketHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,7 @@ public class AsyncTaskService {
     private ObjectMapper objectMapper;
 
     @Autowired(required = false)
+    @Lazy
     private TaskWebSocketHandler taskWebSocketHandler;
 
     private static final String TASK_KEY_PREFIX = "async:task:";
