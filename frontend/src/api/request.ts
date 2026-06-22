@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResp
 import { message } from 'antd'
 import { userStore } from '@/store/userStore'
 
-const request: AxiosInstance = axios.create({
+const request = axios.create({
   baseURL: '/api',
   timeout: 10000,
   headers: {

@@ -54,6 +54,7 @@ const SettingsPage = () => {
         <Space>
           <Button type="link" icon={<ReloadOutlined />} onClick={handleReload}>
             重载
+          </Button>
           <Popconfirm
             title="确认删除这个配置？"
             onConfirm={() => handleDelete(record.id)}

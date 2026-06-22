@@ -152,7 +152,7 @@ const MaterialPage = () => {
 
   const loadCourses = async () => {
     try {
-      const res = await request.get('/course/list')
+      const res = await request.get('/course/list') as unknown as CourseOption[]
       setCourseList(res || [])
     } catch {
       message.error('加载课程列表失败')
