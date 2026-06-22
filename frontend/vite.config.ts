@@ -21,7 +21,8 @@ export default defineConfig({
   // Expose env vars prefixed with VITE_ to the client
   envPrefix: ['VITE_', 'PUBLIC_'],
   build: {
-    sourcemap: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
