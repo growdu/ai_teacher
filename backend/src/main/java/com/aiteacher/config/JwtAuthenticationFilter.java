@@ -11,6 +11,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -24,6 +25,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
     @Autowired
     private JwtService jwtService;
 
+    @Value("${jwt.secret:#{null}}")
+    private String jwtSecretFromConfig;
+
     // CORS allowed origins from environment variable
     private static final List<String> ALLOWED_ORIGINS;
 
@@ -36,13 +40,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
         }
     }
 
-    @Override
-    public void run(ApplicationArguments args) {
-        // JWT secret must come from environment variable JWT_SECRET
-        String jwtSecret = System.getenv("JWT_SECRET");
-        if (jwtSecret == null || jwtSecret.isEmpty()) {
+    private String getJwtSecret() {
+        // Prefer config file value, fall back to env var (for backwards compatibility)
+        if (jwtSecretFromConfig != null && !jwtSecretFromConfig.isEmpty()) {
+            return jwtSecretFromConfig;
+        }
+        String envSecret = System.getenv("JWT_SECRET");
+        if (envSecret == null || envSecret.isEmpty()) {
             throw new IllegalStateException("JWT_SECRET environment variable is not set. Application refuses to start.");
         }
+        return envSecret;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        String jwtSecret = getJwtSecret();
         if (jwtSecret.length() < 32) {
             throw new IllegalStateException("JWT_SECRET must be at least 32 characters long. Current length: " + jwtSecret.length());
         }
