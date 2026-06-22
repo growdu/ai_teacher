@@ -52,13 +52,8 @@ const SettingsPage = () => {
       width: 200,
       render: (_: any, record: AiConfig) => (
         <Space>
-          <Button
-            type="link"
-            icon={<ReloadOutlined />}
-            onClick={() => handleReload(record.id)}
-          >
+          <Button type="link" icon={<ReloadOutlined />} onClick={handleReload}>
             重载
-          </Button>
           <Popconfirm
             title="确认删除这个配置？"
             onConfirm={() => handleDelete(record.id)}
@@ -89,11 +84,10 @@ const SettingsPage = () => {
     }
   }
 
-  const handleReload = async (id: number) => {
+  const handleReload = async () => {
     try {
-      await request.post('/ai-config/reload', { id })
+      await request.post('/ai-config/reload', {})
       message.success('重载成功')
-      loadAiConfigs()
     } catch (error) {
       message.error('重载失败')
     }
@@ -125,7 +119,11 @@ const SettingsPage = () => {
     try {
       const res = await request.get('/ai-config/status')
       if (res.data) {
-        message.info(`当前可用 Provider: ${res.data.availableProviders?.join(', ') || '无'}`)
+        const { llmProvider, ttsProvider, llmAvailable, ttsAvailable } = res.data
+        const parts = []
+        if (llmAvailable) parts.push(`LLM: ${llmProvider || '未知'}`)
+        if (ttsAvailable) parts.push(`TTS: ${ttsProvider || '未知'}`)
+        message.info(parts.length ? `当前可用: ${parts.join(' | ')}` : '无可用 Provider')
       }
     } catch (error) {
       message.error('检查状态失败')
@@ -225,9 +223,12 @@ const SettingsPage = () => {
           >
             <Select
               options={[
-                { value: 'openai', label: 'OpenAI' },
-                { value: 'claude', label: 'Claude' },
-                { value: 'qwen', label: 'Qwen' },
+                { value: 'openai', label: 'OpenAI (GPT-4o)' },
+                { value: 'claude', label: 'Claude (Anthropic)' },
+                { value: 'qwen', label: 'Qwen (通义千问)' },
+                { value: 'minimax', label: 'MiniMax (海螺)' },
+                { value: 'minimax_video', label: 'MiniMax Video' },
+                { value: 'mock', label: 'Mock (开发/演示)' },
                 { value: 'aliyun_tts', label: '阿里云TTS' },
               ]}
               placeholder="选择AI Provider"
@@ -240,7 +241,7 @@ const SettingsPage = () => {
           >
             <Input placeholder="如: gpt-4o, claude-3-5-sonnet" />
           </Form.Item>
-          <Form.Item name="apiKey" label="API Key">
+          <Form.Item name="apiKeyEncrypted" label="API Key">
             <Input.Password placeholder="输入API Key" />
           </Form.Item>
           <Form.Item name="baseUrl" label="Base URL">
