@@ -102,7 +102,7 @@ minio:
   secure: false
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:-test-jwt-secret-at-least-32-characters-long-for-hs256}
   expiration: 86400000
   refresh-expiration: 604800000
   header: Authorization

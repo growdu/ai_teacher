@@ -9,6 +9,7 @@ public enum ProviderType {
     QWEN("Qwen"),
     MINIMAX("MiniMax"),
     DEEPSEEK("DeepSeek"),
+    MOCK("Mock LLM"),
     ALIYUN_TTS("Aliyun TTS"),
     VOLCENGINE_TTS("Volcengine TTS");
     

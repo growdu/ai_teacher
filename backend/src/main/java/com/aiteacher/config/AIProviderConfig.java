@@ -52,6 +52,9 @@ public class AIProviderConfig {
     @Value("${ai.minimax.video-api-key:}")
     private String minimaxVideoApiKey;
 
+    @Value("${ai.mock.enabled:false}")
+    private boolean mockEnabled;
+
     @Autowired
     private AIProviderRegistry registry;
 
@@ -94,6 +97,14 @@ public class AIProviderConfig {
         if (minimaxVideoApiKey != null && !minimaxVideoApiKey.isEmpty()) {
             MiniMaxVideoProvider videoProvider = new MiniMaxVideoProvider(minimaxVideoApiKey);
             log.info("Registered MiniMax Video provider");
+        }
+
+        // Register Mock provider as fallback for development/demo
+        if (mockEnabled || registry.getLLMProviders().isEmpty()) {
+            MockLLMProvider mockProvider = new MockLLMProvider();
+            registry.registerLLMProvider("mock", mockProvider);
+            log.info("Registered Mock LLM provider (enabled={}, noProviders={})",
+                    mockEnabled, registry.getLLMProviders().size() == 1);
         }
     }
 

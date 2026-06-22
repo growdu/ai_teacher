@@ -21,8 +21,12 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[ErrorBoundary] React error:', error, info.componentStack)
-    // Report to error tracking service in production
-    // e.g., fetch('/api/logs/client-error', { body: JSON.stringify({ error, info }) })
+    // Sentry is statically imported in main.tsx — captureException is always available
+    if (typeof window !== 'undefined') {
+      import('../sentry').then(({ captureException }) => {
+        captureException(error, { extra: { componentStack: info.componentStack } })
+      }).catch(() => {/* Sentry not initialized yet */})
+    }
   }
 
   render() {

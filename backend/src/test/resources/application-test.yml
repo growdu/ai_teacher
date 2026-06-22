@@ -1,0 +1,47 @@
+# Test configuration — injects values without needing .env
+jwt:
+  secret: test-jwt-secret-at-least-32-characters-long-for-hs256
+  expiration: 86400000
+  refresh-expiration: 604800000
+  prefix: Bearer
+  header: Authorization
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ai_teacher_test
+    username: postgres
+    password: test
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: test
+
+# Disable external services for unit tests
+payment:
+  enabled: false
+  sandbox-enabled: false
+
+# Test AI keys (empty but present)
+ai:
+  openai:
+    api-key: test
+    base-url: https://api.openai.com
+  claude:
+    api-key: test
+    base-url: https://api.anthropic.com
+
+# MinIO test config
+minio:
+  endpoint: http://localhost:9000
+  access-key: test
+  secret-key: test
+  bucket-name: ai-teacher-test
+  secure: false
+
+# Disable mandatory checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
