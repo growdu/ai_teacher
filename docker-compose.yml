@@ -1,5 +1,3 @@
-version: '3.8'
-
 # AI Teacher Studio — Production Docker Compose
 # ===============================================================
 # All services share the `ai-teacher` network.
@@ -72,6 +70,9 @@ services:
 
   # ── Backend API ───────────────────────────────────────────────
   backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: ai-teacher-backend:local
     container_name: ai-teacher-backend
     networks:
