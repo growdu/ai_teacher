@@ -1,10 +1,11 @@
 package com.aiteacher.controller;
 
-import com.aiteacher.service.JwtService;
 import com.aiteacher.service.PaymentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -14,25 +15,27 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * PaymentController Unit Tests — WebMvcTest (no DB, no full context)
+ * PaymentController Integration Tests
  */
-@WebMvcTest(PaymentController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class PaymentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockBean
     private PaymentService paymentService;
 
-    @MockBean
-    private JwtService jwtService;
-
     @Test
-    void getChannels_withoutAuth_shouldReturn401() throws Exception {
+    void getChannels_withoutAuth_shouldReturnOk() throws Exception {
+        // /api/payment/channels is a public endpoint (no auth required)
         mockMvc.perform(get("/api/payment/channels"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk());
     }
 
     @Test

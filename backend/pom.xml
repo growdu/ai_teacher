@@ -203,15 +203,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <!-- Skip @SpringBootTest integration tests.
-                         Root cause: circular dependency (AsyncTaskService↔TaskWebSocketHandler),
-                         @Autowired field injection issues (SubscriptionService→PlanMapper→sqlSessionFactory),
-                         and JWT_SECRET env-var hardcoded in JwtAuthenticationFilter.
-                         Fix requires dedicated test infrastructure work (TestContainers or @WebMvcTest
-                         slice tests with @MockBean for all services/repositories). -->
-                    <excludes>
-                        <exclude>**/*ControllerTest.java</exclude>
-                    </excludes>
+                    <!-- JWT_SECRET for test environment (used by JwtAuthenticationFilter run()) -->
                     <environmentVariables>
                         <JWT_SECRET>test-jwt-secret-at-least-32-characters-long-for-hs256</JWT_SECRET>
                     </environmentVariables>

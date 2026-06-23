@@ -5,9 +5,12 @@ import com.aiteacher.dto.CourseGenerateRequest;
 import com.aiteacher.dto.CourseGenerateResponse;
 import com.aiteacher.entity.Course;
 import com.aiteacher.service.CourseGenerateService;
+import com.aiteacher.service.JwtService;
+import com.aiteacher.service.SubscriptionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -47,7 +52,23 @@ class CourseControllerTest {
     @MockBean
     private CourseGenerateService courseGenerateService;
 
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private SubscriptionService subscriptionService;
+
+    @BeforeEach
+    void setUp() {
+        // Mock JwtService so SubscriptionInterceptor's manual JWT check passes
+        when(jwtService.validateToken(anyString())).thenReturn(true);
+        when(jwtService.getTenantIdFromToken(anyString())).thenReturn(1L);
+        // Free tier (no active subscription)
+        when(subscriptionService.getCurrentSubscription(anyLong())).thenReturn(null);
+    }
+
     @Test
+    @WithMockUser
     void getCourseById_withValidId_shouldReturnCourse() throws Exception {
         Course mockCourse = new Course();
         mockCourse.setId(1L);
@@ -57,7 +78,8 @@ class CourseControllerTest {
 
         when(courseGenerateService.getById(1L)).thenReturn(mockCourse);
 
-        mockMvc.perform(get("/api/course/1"))
+        mockMvc.perform(get("/api/course/1")
+                        .header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.title").value("牛顿第二定律"))
@@ -65,15 +87,18 @@ class CourseControllerTest {
     }
 
     @Test
+    @WithMockUser
     void getCourseById_withNonExistentId_shouldReturnEmpty() throws Exception {
         when(courseGenerateService.getById(999L)).thenReturn(null);
 
-        mockMvc.perform(get("/api/course/999"))
+        mockMvc.perform(get("/api/course/999")
+                        .header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isEmpty());
     }
 
     @Test
+    @WithMockUser
     void pageCourses_shouldReturnPaginatedResults() throws Exception {
         Course course1 = new Course();
         course1.setId(1L);
@@ -93,6 +118,7 @@ class CourseControllerTest {
                 .thenReturn(mockPage);
 
         mockMvc.perform(get("/api/course/page")
+                        .header("Authorization", "Bearer mock-token")
                         .param("pageNum", "1")
                         .param("pageSize", "10"))
                 .andExpect(status().isOk())
@@ -103,16 +129,19 @@ class CourseControllerTest {
     }
 
     @Test
+    @WithMockUser
     void deleteCourse_withValidId_shouldReturnTrue() throws Exception {
         when(courseGenerateService.updateById(any(Course.class))).thenReturn(true);
 
         mockMvc.perform(delete("/api/course/1")
+                        .header("Authorization", "Bearer mock-token")
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(true));
     }
 
     @Test
+    @WithMockUser
     void updateCourse_shouldReturnUpdatedResult() throws Exception {
         Course updated = new Course();
         updated.setId(1L);
@@ -121,6 +150,7 @@ class CourseControllerTest {
         when(courseGenerateService.updateById(any(Course.class))).thenReturn(true);
 
         mockMvc.perform(put("/api/course/1")
+                        .header("Authorization", "Bearer mock-token")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updated)))
@@ -129,6 +159,7 @@ class CourseControllerTest {
     }
 
     @Test
+    @WithMockUser
     void generateCourse_withValidRequest_shouldReturnCourseResponse() throws Exception {
         CourseGenerateResponse response = CourseGenerateResponse.builder()
                 .courseId(10L)
@@ -145,6 +176,7 @@ class CourseControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/course/generate")
+                        .header("Authorization", "Bearer mock-token")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

@@ -74,7 +74,7 @@ class AuthControllerTest {
     void register_withValidRequest_shouldReturnToken() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("newuser");
-        request.setPassword("password123");
+        request.setPassword("Password123");  // must have upper+lower+digit per RegisterRequest validation
         request.setEmail("newuser@example.com");
 
         com.aiteacher.dto.LoginResponse loginResponse = new com.aiteacher.dto.LoginResponse();
