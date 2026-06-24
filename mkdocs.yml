@@ -64,3 +64,4 @@ nav:
       - 技术选型: tech-stack.md
       - 高层设计: high-level-design.md
       - 实现计划: implementation-plan.md
+      - PPT生成模块设计: ppt-generation-design.md
