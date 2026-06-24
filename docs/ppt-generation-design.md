@@ -583,9 +583,251 @@ AIEnrichmentService 在生成章节幻灯片时，必须在叙事弧中嵌入互
 
 ---
 
-## 6. 现有 Skill 整合策略
+## 6. PPT 生成 LLM 选型调研
 
-### 6.1 baoyu-infographic — 图表/信息图生成
+> AIEnrichmentService 是 PPT 生成质量的核心瓶颈。本章节调研适合"生成结构化幻灯片内容 + 教学设计"的 LLM，评估维度：中文教育内容质量、JSON 结构化输出稳定性、多模态（图片生成）、成本。
+
+### 6.0 评估维度与权重
+
+| 评估维度 | 权重 | 说明 |
+|---------|------|------|
+| 中文教育内容质量 | 30% | 理科准确性、文科趣味性、知识深度 |
+| JSON 结构化输出稳定性 | 25% | SlideContent JSON 解析成功率 |
+| 工具调用能力（Function Calling） | 20% | 能否稳定调用图片生成等工具 |
+| 多模态（图片/图表生成） | 15% | 原生支持图片生成或调用外部工具 |
+| 成本 | 10% | 每千次章节调用成本 |
+
+### 6.1 LLM 横向对比
+
+| LLM | 厂商 | 中文质量 | JSON 稳定性 | Function Calling | 多模态 | 上下文 | 成本/吨 |
+|------|------|---------|------------|-----------------|--------|-------|--------|
+| GPT-4o | OpenAI | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐（DALL-E） | 128k | $2.5 |
+| GPT-4o-mini | OpenAI | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐（DALL-E） | 128k | $0.15 |
+| Claude 3.5 Sonnet | Anthropic | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐（仅视觉） | 200k | $3.0 |
+| Claude 3.5 Haiku | Anthropic | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | 200k | $0.25 |
+| Gemini 2.0 Flash | Google | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐（原生图） | 1M | $0.10 |
+| Gemini 2.5 Pro | Google | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐（原生图） | 1M | $1.25 |
+| DeepSeek V3 | 深度求索 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | 64k | $0.50 |
+| GLM-4 | 智谱 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | 128k | $0.50 |
+| Qwen 2.5 72B | 阿里 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | 32k | $0.90 |
+| MiniMax | MiniMax | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐（视频） | 100k | $0.20 |
+
+### 6.2 场景化推荐
+
+#### 场景 A：高质量生产环境（大学/培训机构）
+
+**推荐：GPT-4o + GPT-4o-mini（分级策略）**
+
+| 内容类型 | 使用模型 | 原因 |
+|---------|---------|------|
+| 课程大纲生成 | GPT-4o | 强推理 + 结构化输出，一次性生成完整 outline |
+| 章节幻灯片内容（文字） | GPT-4o-mini | 量大、JSON 稳定、成本低 |
+| 信息图生成 prompt | GPT-4o | 提示词质量决定图片质量 |
+| 知识漫画分镜 | GPT-4o | 需要强角色一致性提示词 |
+| 随堂测验生成 | GPT-4o-mini | 格式固定、量大 |
+
+分级策略成本估算：
+- 1 门课（5 章，每章 8 张幻灯片）= 40 次 min 调用 + 5 次大调用
+- 成本：40 × $0.15 + 5 × $2.5 = **$14.5/门课**
+
+#### 场景 B：中文教育主力（中小学）
+
+**推荐：GLM-4 + 智谱 ChatGLM（中文专项）**
+
+| 内容类型 | 使用模型 | 原因 |
+|---------|---------|------|
+| 通用幻灯片内容 | GLM-4 | 中文质量接近 GPT-4o，成本低 |
+| 理科内容（公式/推导） | GLM-4 | 智谱对中文理科术语处理较好 |
+| 图片生成 | Gemini 2.0 Flash（via API） | 性价比最高，支持中文 prompt |
+
+**备选：DeepSeek V3**
+- 数学推导能力强，适合物理/化学
+- 缺点：Function Calling 支持较新，需要充分测试
+
+#### 场景 C：成本敏感场景（个人老师/小机构）
+
+**推荐：GPT-4o-mini + Gemini 2.0 Flash**
+
+- 主模型：GPT-4o-mini（JSON 内容生成）
+- 图片模型：Gemini 2.0 Flash（原生图生成，成本 $0.10/吨）
+- 成本估算：$0.25/千章节 ≈ 可忽略不计
+
+#### 场景 D：离线/私有部署
+
+**推荐：Qwen 2.5 + Ollama 本地推理**
+
+- Qwen 2.5 72B：通过 Ollama 本地部署
+- 优点：数据不出本地，适合有隐私要求的机构
+- 缺点：JSON 稳定性不如 GPT-4o，需要后处理校验
+
+### 6.3 图像生成模型专项对比
+
+PPT 中的信息图/漫画依赖图像生成质量：
+
+| 模型 | 适合风格 | 中文支持 | API 可用性 | 成本 |
+|------|---------|---------|-----------|------|
+| DALL-E 3 | 写实/插画 | ⭐⭐⭐⭐ | OpenAI API | $0.04/图 |
+| Midjourney V6 | 高质量插画/艺术 | ⭐⭐⭐ | 需第三方中介 | $0.03/图 |
+| Stable Diffusion 3 | 定制化/可控 | ⭐⭐⭐ | 本地部署 | GPU 成本 |
+| Gemini 2.0 Flash | 快速草图/示意图 | ⭐⭐⭐⭐ | Google API | $0.10/1M token |
+| FLUX.1 | 精确文字渲染 | ⭐⭐⭐ | Replicate API | $0.05/图 |
+| 通义万相 | 中文艺术/插画 | ⭐⭐⭐⭐⭐ | 阿里云 | ¥0.16/图 |
+| 文心一格 | 国风/中文 | ⭐⭐⭐⭐⭐ | 百度云 | ¥0.25/图 |
+
+**推荐组合（中文教育 PPT）**：
+
+| 用途 | 推荐模型 | 原因 |
+|------|---------|------|
+| 理科示意图（流程图/电路图/化学式） | DALL-E 3 或 FLUX.1 | 精确文字渲染能力强 |
+| 知识漫画（分镜/人物） | Midjourney V6 或 DALL-E 3 | 风格一致性与艺术感 |
+| 信息图（卡片/对比/时间线） | 通义万相 或 Gemini 2.0 Flash | 中文友好，性价比高 |
+| 国风/传统题材（语文/历史） | 文心一格 | 中文艺术风格最优 |
+| 黑白板书风插图 | Stable Diffusion 3（本地） | 可控风格，低成本 |
+
+### 6.4 提示词工程最佳实践
+
+#### 6.4.1 JSON 输出稳定性技巧
+
+LLM 直接输出 SlideContent JSON 时容易出现：
+- 混入 Markdown 代码块（\`\`\`json...）
+- 字段名拼写不一致
+- 数组元素漏逗号
+
+**解决策略 1：Function Calling（推荐）**
+
+```java
+// 使用 GPT-4o / Claude 的 Function Calling，强制 JSON Schema 输出
+@JsonFunction(
+    name = "generate_slides",
+    description = "生成课程章节的幻灯片内容",
+    parameters = {
+        @Property(name = "slides", type = "array"),
+        @Property(name = "narrativeArc", type = "object"),
+        @Property(name = "learningObjectives", type = "array")
+    }
+)
+```
+
+**解决策略 2：结构化输出提示词模板**
+
+直接输出 JSON，不要有任何前缀或解释。输出格式必须严格遵守：
+{"slides": [...], "narrativeArc": {...}, "learningObjectives": [...]}
+不允许出现： markdown 代码块包裹、以上是、下面是的解释性文字。
+如违反格式，本次回答将被判定为失败。
+
+**解决策略 3：后置校验 + 自动修复**
+
+```java
+// AIEnrichmentService.enrichChapters() 中
+String raw = llm.complete(prompt);
+// 1. 去除 Markdown 代码块包装
+raw = raw.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
+// 2. JSON Schema 校验（用 Jackson）
+try {
+    JsonNode node = objectMapper.readTree(raw);
+    validateSlideContent(node);
+} catch (JsonProcessingException e) {
+    // 3. 自动重试一次
+    raw = llm.complete(retryPrompt);
+}
+```
+
+#### 6.4.2 提示词模板（完整版）
+
+```
+【系统提示】
+你是资深教育专家，精通以下领域：
+1. K-12 各学科知识（数学/物理/化学/生物/历史/语文）
+2. 教学设计：Bloom 认知分类、建构主义学习、掌握学习法
+3. PPT 设计原则：每页一个核心信息、文字密度 ≤20%、必须有视觉元素
+4. 理科要求：准确性优先，公式必须完整带单位，不能跳步
+
+【角色约束】
+- 科目类型：{subjectType}（science | humanities）
+- 教学对象：{audience}（小学生/初中生/高中生/大学生/成人）
+- 输出语言：{language}（中文 | 英文）
+
+【任务】
+为章节「{chapterTitle}」设计 {slideCount} 张幻灯片。
+
+【叙事弧约束 - 理科必须执行四步法】
+Step 1：问题引入（problem 类型，必须有一个生活中可操作的问题）
+Step 2：概念讲解（concept/derivation 类型，公式必须完整）
+Step 3：例题演练（exercise 类型，例题必须有完整解答）
+Step 4：总结提升（summary/exit-ticket 类型）
+
+【互动设计约束 - 每章至少 3 个互动节点】
+在叙事弧的 3 个关键节点各插入 1 个互动：
+- 导入环节 → vote 或 poll
+- 概念讲解后 → quick-fire 或 think-pair-share
+- 练习结束后 → exit-ticket 或 game
+
+【幻灯片内容要求】
+- slideType 必须是以下之一：
+  text|diagram|infographic|comic|case|quote|quiz|activity|reflection
+  |problem|concept|exercise|derivation
+  |vote|poll|quick-fire|experiment|game|exit-ticket|result-viz
+- 每张幻灯片的 mainBody 不超过 100 字
+- 理科 slides 的 formula 字段必须包含完整数学表达式
+- 所有数据必须标注来源
+
+【输出格式】
+直接输出 JSON，不要有任何前缀或解释：
+{
+  "chapterTitle": "...",
+  "narrativeArc": { "opening": "...", "exploration": "...", "discovery": "...", "application": "..." },
+  "learningObjectives": ["...", "..."],
+  "interactionNodes": [{ "type": "...", "question": "...", "triggerMoment": "..." }],
+  "slides": [
+    {
+      "slideType": "...",
+      "title": "...",
+      "mainBody": "...",
+      "bullets": ["...", "..."],
+      "formula": "...",
+      "duration": 3,
+      "teacherNote": "...",
+      "visualGuidance": "...",
+      "layout": "...",
+      "artStyle": "..."
+    }
+  ],
+  "totalDuration": 20
+}
+```
+
+### 6.5 主流 AI PPT 生成工具调研
+
+| 工具 | 定位 | AI 能力 | 模板质量 | 适合场景 |
+|------|------|---------|---------|---------|
+| Gamma | AI-first PPT | 生成完整 PPT（文字+图） | ⭐⭐⭐⭐⭐ | 快速生成演示文稿 |
+| Beautiful.ai | 智能排版 | 模板智能适配 | ⭐⭐⭐⭐ | 不会设计的人 |
+| Tome | 叙事型 PPT | 文字驱动，AI 生成 | ⭐⭐⭐⭐ | 讲故事/提案 |
+| Slidebean | 商业计划 | AI 内容填充 | ⭐⭐⭐ | 商业场景 |
+| Canva AI | 设计工具 | 文字→设计 | ⭐⭐⭐⭐ | 设计素材 |
+| 闪击 PPT | 中文 AI PPT | 中文 Prompt 输入 | ⭐⭐⭐⭐ | 中国用户 |
+| 博思白板 | 白板工具 | 文字→PPT | ⭐⭐⭐⭐ | 互动白板 |
+
+**博思白板 / 闪击 PPT 的优势（值得借鉴）**：
+- 对中文教育场景有专项优化（教材同步、知识点标签）
+- 模板库中有大量"互动课件"模板（投票/讨论/实验）
+- 支持导出 PPTX，可与本模块互补
+
+### 6.6 推荐技术方案总结
+
+| 阶段 | 内容生成 | 图片生成 | 说明 |
+|------|---------|---------|------|
+| Phase 1（最小可行） | GPT-4o-mini | DALL-E 3 | 最快出效果 |
+| Phase 2（中文优化） | GLM-4 + GPT-4o-mini | 通义万相 + DALL-E 3 | 中文内容用国产 |
+| Phase 3（成本优化） | GPT-4o-mini + Gemini 2.0 Flash | Gemini 2.0 Flash | 成本降至 $0.35/千章节 |
+| Phase 4（多模态融合） | GPT-4o（主）+ Gemini 2.0 Flash（辅） | Gemini 2.0 Flash（原生图） | 最佳质量 |
+
+---
+
+
+## 7. 现有 Skill 整合策略
+
+### 7.1 baoyu-infographic — 图表/信息图生成
 
 **作用**：为每个知识点生成配套信息图，代替大段文字说明。
 
@@ -612,7 +854,7 @@ AIEnrichmentService 在生成章节幻灯片时，必须在叙事弧中嵌入互
 | 循环规律 | `circular-flow` | `chalkboard` |
 | 密集信息 | `dense-modules` | `pop-laboratory` |
 
-### 6.2 baoyu-comic — 知识漫画生成
+### 7.2 baoyu-comic — 知识漫画生成
 
 **作用**：将抽象概念转化为 2-4 格漫画，提升趣味性。
 
@@ -626,7 +868,7 @@ AIEnrichmentService 在生成章节幻灯片时，必须在叙事弧中嵌入互
 - 原理揭示（用比喻/拟人化角色讲解原理）
 - 易错点澄清（用错误 vs 正确的对比漫画）
 
-### 6.3 powerpoint — PPT 设计与渲染
+### 7.3 powerpoint — PPT 设计与渲染
 
 **作用**：基于 `powerpoint` skill 的设计规范，指导 JS 层幻灯片渲染。
 
@@ -643,7 +885,7 @@ AIEnrichmentService 在生成章节幻灯片时，必须在叙事弧中嵌入互
 
 ---
 
-## 7. PPT 构建流程（重构）
+## 8. PPT 构建流程（重构）
 
 ```
 输入：List<ChapterContent>
@@ -686,7 +928,7 @@ PptBuildService.buildPptRequest()
 
 ---
 
-## 8. 幻灯片类型 → JS 渲染函数映射
+## 9. 幻灯片类型 → JS 渲染函数映射
 
 | slideType | JS 函数 | 布局特点 | 视觉来源 |
 |-----------|---------|---------|---------|
@@ -711,7 +953,7 @@ PptBuildService.buildPptRequest()
 
 ---
 
-## 9. API 设计
+## 10. API 设计
 
 ```
 POST /api/material/ppt/generate
@@ -764,7 +1006,7 @@ Response:
 
 ---
 
-## 10. 模板系统扩展
+## 11. 模板系统扩展
 
 在现有 4 套模板基础上，结合 powerpoint skill 的配色规范，扩展为 9 套模板：
 
@@ -812,9 +1054,9 @@ const TEMPLATES = {
 
 ---
 
-## 11. 视觉资产生成流程
+## 12. 视觉资产生成流程
 
-### 11.1 图片/信息图生成（baoyu-infographic 整合）
+### 9.1 图片/信息图生成（baoyu-infographic 整合）
 
 ```
 AIEnrichmentService 生成 SlideContent
@@ -837,7 +1079,7 @@ AIEnrichmentService 生成 SlideContent
     传给 generate-ppt.js → 在对应位置插入图片
 ```
 
-### 11.2 知识漫画生成（baoyu-comic 整合）
+### 9.2 知识漫画生成（baoyu-comic 整合）
 
 ```
 AIEnrichmentService 生成 SlideContent
@@ -863,7 +1105,7 @@ AIEnrichmentService 生成 SlideContent
 
 ---
 
-## 12. 异步化改造（可选）
+## 13. 异步化改造（可选）
 
 当前 PPT 生成是同步的，文件较大时可能超时：
 
@@ -885,7 +1127,7 @@ AsyncTask 表状态：PENDING → PROCESSING → COMPLETED / FAILED
 
 ---
 
-## 13. 实现计划
+## 14. 实现计划
 
 | 阶段 | 任务 | 优先级 | 依赖 |
 |------|------|--------|------|
@@ -902,7 +1144,7 @@ AsyncTask 表状态：PENDING → PROCESSING → COMPLETED / FAILED
 
 ---
 
-## 14. 测试验证
+## 15. 测试验证
 
 | 级别 | 内容 |
 |------|------|
@@ -915,7 +1157,7 @@ AsyncTask 表状态：PENDING → PROCESSING → COMPLETED / FAILED
 
 ---
 
-## 15. 自定义 Skill 建议：teaching-ppt
+## 16. 自定义 Skill 建议：teaching-ppt
 
 建议在 `.hermes/skills/` 下新建 `teaching-ppt` skill，沉淀教学 PPT 生成的方法论：
 
