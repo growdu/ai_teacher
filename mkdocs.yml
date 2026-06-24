@@ -59,9 +59,14 @@ nav:
       - 安装部署: DEPLOYMENT.md
       - 开发指南: DEVELOPMENT.md
   - 技术文档:
-      - API 文档: API.md
       - 架构设计: architecture-design.md
+      - 模块详细设计:
+          - 知识点管理: knowledge-management-design.md
+          - 课程管理: course-design.md
+          - PPT生成: ppt-generation-design.md
+          - 视频生成: video-generation-design.md
+          - 测验模块: quiz-design.md
+      - API 文档: API.md
       - 技术选型: tech-stack.md
       - 高层设计: high-level-design.md
       - 实现计划: implementation-plan.md
-      - PPT生成模块设计: ppt-generation-design.md

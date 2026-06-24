@@ -82,14 +82,14 @@ public class MockLLMProvider extends AbstractLLMProvider {
     private String generateResponse(String prompt) {
         String lower = prompt.toLowerCase();
 
-        // Course generation
-        if (lower.contains("课程") || lower.contains("course")) {
-            return generateCourseResponse(prompt);
-        }
-
-        // Quiz/exam generation
+        // Quiz/exam generation — check FIRST (more specific)
         if (lower.contains("测验") || lower.contains("quiz") || lower.contains("题目") || lower.contains("试题")) {
             return generateQuizResponse(prompt);
+        }
+
+        // Course generation — check AFTER quiz to avoid "课程标题" prefix triggering course route
+        if (lower.contains("课程") || lower.contains("course")) {
+            return generateCourseResponse(prompt);
         }
 
         // Teaching material / PPT
@@ -142,36 +142,127 @@ public class MockLLMProvider extends AbstractLLMProvider {
     }
 
     private String generateQuizResponse(String prompt) {
-        return """
-        # AI Teacher Studio - 测验题目（模拟数据）
+        // Detect difficulty and type from prompt
+        String lower = prompt.toLowerCase();
+        String difficulty = "medium";
+        String type = "mixed";
+        if (lower.contains("简单") || lower.contains("easy")) difficulty = "easy";
+        else if (lower.contains("困难") || lower.contains("hard")) difficulty = "hard";
+        if (lower.contains("选择题")) type = "choice";
+        else if (lower.contains("填空题")) type = "blank";
+        else if (lower.contains("简答题")) type = "essay";
 
-        ## 一、选择题（共10题）
+        // Extract count from prompt (look for a number near "题" or "count")
+        int count = 5;
+        for (int i = 0; i < prompt.length() - 1; i++) {
+            if (prompt.charAt(i) >= '0' && prompt.charAt(i) <= '9') {
+                int j = i;
+                while (j < prompt.length() && prompt.charAt(j) >= '0' && prompt.charAt(j) <= '9') j++;
+                String num = prompt.substring(i, j);
+                if (j < prompt.length() && (prompt.charAt(j) == '题' || prompt.substring(j).startsWith("道试题"))) {
+                    try { count = Integer.parseInt(num); } catch (Exception ignored) {}
+                    break;
+                }
+            }
+        }
+        count = Math.max(1, Math.min(count, 20));
 
-        1. 人工智能的英文缩写是？
-        A. AR  B. VR  C. AI  D. ML
+        StringBuilder json = new StringBuilder();
+        json.append("{\n  \"questions\": [\n");
 
-        2. 下列不属于机器学习算法的是？
-        A. 决策树  B. 神经网络  C. 冒泡排序  D. 支持向量机
+        // Generate choice questions
+        int choiceCount = (type.equals("choice") || type.equals("mixed")) ? Math.max(1, count / 2) : 0;
+        // Generate blank questions
+        int blankCount = type.equals("blank") ? count : 0;
+        // Generate essay questions
+        int essayCount = type.equals("essay") ? count : 0;
+        if (type.equals("mixed")) essayCount = count - choiceCount;
 
-        3. 深度学习中的"深度"指的是？
-        A. 数据量大  B. 网络层数多  C. 计算复杂  D. 应用广泛
+        String[] easyQuestions = {
+            "人工智能的英文缩写是什么？", "机器学习属于人工智能的哪个分支？",
+            "深度学习通常使用哪种网络结构？", "自然语言处理简称是？",
+            "计算机视觉主要研究什么？", "监督学习需要什么数据？"
+        };
+        String[] mediumQuestions = {
+            "下列哪个算法不属于监督学习？", "卷积神经网络主要用于哪类任务？",
+            "Transformer架构的核心机制是？", "反向传播算法的作用是？",
+            "下列哪个不是常见的激活函数？", "梯度消失问题通常发生在？"
+        };
+        String[] hardQuestions = {
+            "请解释GAN网络中生成器和判别器的对抗机制。",
+            "BERT模型的双向编码特性是如何实现的？",
+            "深度学习中batch size对模型收敛有什么影响？",
+            "解释注意力机制中Query、Key、Value的作用。",
+            "ResNet通过什么方式解决了网络深度带来的退化问题？"
+        };
+        String[][] questionsByDiff = { easyQuestions, mediumQuestions, hardQuestions };
+        int diffIdx = "easy".equals(difficulty) ? 0 : "hard".equals(difficulty) ? 2 : 1;
 
-        ## 二、判断题（共5题）
+        int qIndex = 0;
+        String[] letters = {"A", "B", "C", "D"};
 
-        1. 人工智能可以完全取代人类工作。（×）
-        2. 机器学习是人工智能的一个子领域。（✓）
-        3. 神经网络受人脑神经元结构启发。（✓）
+        for (int q = 0; q < choiceCount && qIndex < count; q++) {
+            if (q > 0) json.append(",\n");
+            String[] opts = {
+                "监督学习", "无监督学习", "强化学习", "迁移学习"
+            };
+            String correct = letters[q % 4];
+            // Shuffle options
+            String tmp = opts[0]; opts[0] = opts[q % 4]; opts[q % 4] = tmp;
 
-        ## 三、简答题（共3题）
+            json.append("    {\n");
+            json.append("      \"type\": \"choice\",\n");
+            json.append("      \"content\": \"").append(questionsByDiff[diffIdx][q % questionsByDiff[diffIdx].length]).append("\",\n");
+            json.append("      \"options\": [\"").append(letters[0]).append(". ").append(opts[0]).append("\", \"")
+                .append(letters[1]).append(". ").append(opts[1]).append("\", \"")
+                .append(letters[2]).append(". ").append(opts[2]).append("\", \"")
+                .append(letters[3]).append(". ").append(opts[3]).append("\"],\n");
+            json.append("      \"answer\": \"").append(correct).append("\",\n");
+            json.append("      \"explanation\": \"该题考查").append(questionsByDiff[diffIdx][q % questionsByDiff[diffIdx].length]).append("相关概念。").append(correct).append("选项正确。\"\n");
+            json.append("    }");
+            qIndex++;
+        }
 
-        1. 请简述人工智能、机器学习和深度学习三者之间的关系。
-        2. 列举人工智能在教育领域的3个应用场景。
-        3. 如何看待人工智能带来的伦理问题？
+        for (int q = 0; q < blankCount && qIndex < count; q++) {
+            if (q > 0 || choiceCount > 0) json.append(",\n");
+            String[] blanks = {
+                "深度学习中的\"深度\"指的是神经网络的______层数。",
+                "机器学习通常分为监督学习、______学习和强化学习三大类。",
+                "CNN的中文全称是______神经网络。",
+                "Transformer架构中使用的核心机制是______注意力。",
+                "反向传播算法用于优化神经网络的______。",
+                "在机器学习中，训练集用于______模型，测试集用于评估模型性能。"
+            };
+            String[] answers = {"隐藏", "无监督", "卷积", "自", "权重", "训练"};
+            json.append("    {\n");
+            json.append("      \"type\": \"blank\",\n");
+            json.append("      \"content\": \"").append(blanks[q % blanks.length]).append("\",\n");
+            json.append("      \"answer\": \"").append(answers[q % answers.length]).append("\",\n");
+            json.append("      \"explanation\": \"填空题考查对基本概念的理解，正确答案为：").append(answers[q % answers.length]).append("。\"\n");
+            json.append("    }");
+            qIndex++;
+        }
 
-        ## 参考答案
-        选择题：1.C 2.C 3.B
-        判断题：1.× 2.✓ 3.✓
-        """;
+        for (int q = 0; q < essayCount && qIndex < count; q++) {
+            if (q > 0 || choiceCount > 0 || blankCount > 0) json.append(",\n");
+            String[] essays = {
+                "请简述人工智能、机器学习和深度学习三者之间的关系。",
+                "列举人工智能在教育领域的3个应用场景，并说明其原理。",
+                "解释什么是过拟合，如何避免过拟合？",
+                "深度学习在计算机视觉中有哪些经典应用？请举例说明。",
+                "你认为人工智能技术在未来10年将如何改变教育行业？"
+            };
+            json.append("    {\n");
+            json.append("      \"type\": \"essay\",\n");
+            json.append("      \"content\": \"").append(essays[q % essays.length]).append("\",\n");
+            json.append("      \"answer\": \"（参考答案）该题要求结合所学知识进行综合分析，答案要点：...。\",\n");
+            json.append("      \"explanation\": \"简答题考查对概念的综合理解和应用能力，答题时应注意逻辑清晰、要点完整。\"\n");
+            json.append("    }");
+            qIndex++;
+        }
+
+        json.append("\n  ]\n}");
+        return json.toString();
     }
 
     private String generateMaterialResponse(String prompt) {

@@ -41,12 +41,18 @@ public class QuizGenerationService {
 
             // 2. Build prompt for quiz generation
             String prompt = buildQuizPrompt(request, course);
+            log.info("Quiz prompt: {}", prompt);
 
             // 3. Call LLM to generate quiz
+            log.info("=== BEFORE AI CHAT CALL ===");
             String response = aiService.chat(prompt);
+            log.info("=== AFTER AI CHAT CALL, response length={} ===", response.length());
+            log.info("AI response starts with: {}", response.substring(0, Math.min(200, response.length())));
 
             // 4. Parse response
-            return parseQuizResponse(response, request.getCourseId());
+            QuizGenerateResponse result = parseQuizResponse(response, request.getCourseId());
+            log.info("Parsed questions count: {}", result.getQuestions() == null ? 0 : result.getQuestions().size());
+            return result;
 
         } catch (Exception e) {
             log.error("Quiz generation failed: {}", e.getMessage(), e);

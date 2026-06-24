@@ -43,9 +43,91 @@ PptGenerationService (Java)
 
 ---
 
-## 2. 目标
+## 2. 对知识点模块的要求
 
-PPT 内容经 AI 二次处理，每张幻灯片包含足够的教学文字、视觉层次和教学设计元素（案例、测验、讨论等）。
+> PPT 模块不直接依赖 `KnowledgePoint` 表，只通过 `Course.outline` 中转数据。但 **Course.outline 的生成质量直接取决于知识点的内容质量**，因此两者之间存在隐式依赖关系。
+
+### 2.1 知识点 → 课程的输入契约
+
+`CourseGenerateService.generateCourse()` 调用 `KnowledgePointService.getInputForCourse(kpId)`，获得标准化知识点输入：
+
+```java
+public class KnowledgePointInput {
+    Long knowledgePointId;
+    String subjectType;           // science / humanities（必填）
+    String subject;              // 数学/物理/化学/语文/历史（必填）
+    String grade;                // 年级（必填，影响内容深度）
+    String content;              // 原始内容（LLM 输入）
+    String contentStructured;    // JSON，结构化内容（必填）
+    // {
+    //   "type": "concept|formula|principle|example",
+    //   "coreDefinition": "核心定义（必填）",
+    //   "keyPoints": ["要点1", "要点2"],         // 至少3条
+    //   "formulas": ["公式1", "公式2"],          // 理科必填
+    //   "examples": ["例题1", "例题2"],          // 建议至少1个
+    //   "commonMistakes": ["易错点1"]             // 建议至少1个
+    // }
+    List<String> keyPoints;      // 核心要点列表（从contentStructured提取）
+    List<String> formulas;       // 公式列表（理科）
+    List<String> prerequisiteTitles; // 前置知识点标题
+    Integer estimatedMinutes;    // 预估讲解时长（建议提供）
+}
+```
+
+### 2.2 知识点内容质量对 PPT 的影响
+
+| 知识点字段 | PPT 生成的影响 | 最低要求 |
+|-----------|-------------|---------|
+| `contentStructured.type` | 决定幻灯片类型选择（concept→concept slide，example→exercise slide） | 必填 |
+| `coreDefinition` | concept slide 的主要内容来源 | 必填 |
+| `keyPoints` | bullet slide / infographic slide 的要点来源 | 至少3条 |
+| `formulas` | derivation / concept slide 的公式来源（理科） | 理科必填 |
+| `examples` | exercise slide 的例题来源 | 建议提供 |
+| `commonMistakes` | 讨论/辨析类幻灯片的内容来源 | 建议提供 |
+| `estimatedMinutes` | 决定幻灯片总时长分配 | 建议提供 |
+
+### 2.3 知识点质量等级与 PPT 效果
+
+| 等级 | 知识点内容质量 | PPT 生成效果 |
+|------|-------------|------------|
+| A（优秀） | 完整提供 `contentStructured`（type + coreDefinition + keyPoints + formulas + examples + commonMistakes） | 幻灯片丰富、准确、互动节点充足 |
+| B（合格） | 提供 `contentStructured` 但缺少部分字段（仅有 keyPoints） | 幻灯片基本可用，但例题/易错点缺失 |
+| C（不足） | 只有纯文本 `content`，无结构化信息 | 幻灯片依赖 LLM 自由发挥，质量不稳定 |
+| D（不合格） | `content` 过于简短（少于50字） | PPT 内容空洞，不可用 |
+
+**CourseGenerateService 应在生成课程前评估知识点质量，等级 C/D 时向用户发出警告**。
+
+### 2.4 API 层要求
+
+`POST /api/course/generate` 接口应在生成课程前**校验知识点输入**：
+
+```json
+// 请求示例
+{
+  "knowledgePointId": 1,
+  "generateAfter": ["ppt", "video", "quiz"]
+}
+
+// 响应（知识点质量不足时）
+{
+  "code": 400,
+  "message": "知识点内容不足以保证PPT质量",
+  "data": {
+    "knowledgePointId": 1,
+    "qualityGrade": "C",
+    "warnings": [
+      "缺少 contentStructured 字段，内容结构化程度不足",
+      "缺少 formulas 字段，理科课程建议补充公式",
+      "缺少 examples 字段，建议提供至少1个例题"
+    ],
+    "suggestion": "请先完善知识点内容，或选择'强制生成'跳过质量检查"
+  }
+}
+```
+
+---
+
+## 3. 目标
 
 **新增核心目标**：
 

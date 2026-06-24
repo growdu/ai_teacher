@@ -1,175 +1,376 @@
 import { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Table, Tag, List, Avatar, Button, Space } from 'antd'
-import { UserOutlined, BookOutlined, FolderOutlined, RiseOutlined, PlayCircleOutlined, FileTextOutlined } from '@ant-design/icons'
+import {
+  Card, Row, Col, Statistic, Table, Tag, Button, Space,
+  Progress, List, Avatar, Skeleton
+} from 'antd'
+import {
+  BookOutlined, ExperimentOutlined, FolderOutlined,
+  PlayCircleOutlined, FileTextOutlined, ArrowRightOutlined,
+  PlusOutlined, ThunderboltOutlined, CheckCircleOutlined,
+  ClockCircleOutlined
+} from '@ant-design/icons'
 import request from '@/api/request'
 import { useNavigate } from 'react-router-dom'
 
+interface DashboardStats {
+  courseCount: number
+  knowledgeCount: number
+  materialCount: number
+  activeTaskCount: number
+  generatedCourseCount: number
+  generationRate: number
+  pptCount: number
+  videoCount: number
+}
+
+interface Course {
+  id: number
+  title: string
+  status: string
+  createdAt: string
+}
+
+interface Material {
+  id: number
+  title: string
+  materialType: string
+  status: string
+}
+
 const Dashboard = () => {
   const navigate = useNavigate()
-  const [stats, setStats] = useState({
-    courseCount: 0,
-    knowledgeCount: 0,
-    materialCount: 0,
-    activeTaskCount: 0,
+  const [stats, setStats] = useState<DashboardStats>({
+    courseCount: 0, knowledgeCount: 0, materialCount: 0, activeTaskCount: 0,
+    generatedCourseCount: 0, generationRate: 0, pptCount: 0, videoCount: 0,
   })
-  const [recentCourses, setRecentCourses] = useState<any[]>([])
-  const [recentMaterials, setRecentMaterials] = useState<any[]>([])
+  const [recentCourses, setRecentCourses] = useState<Course[]>([])
+  const [recentMaterials, setRecentMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
+  useEffect(() => { loadDashboardData() }, [])
 
   const loadDashboardData = async () => {
     setLoading(true)
     try {
-      // Load courses
-      const courseRes = await request.get('/course/page?pageNum=1&pageSize=5') as any
-      const courses = courseRes?.records || []
-      setRecentCourses(courses)
-      setStats(prev => ({ ...prev, courseCount: courseRes?.total || 0 }))
+      // Load stats + recent data in parallel
+      const [statsRes, courseRes, materialRes] = await Promise.allSettled([
+        request.get('/dashboard/stats') as any,
+        request.get('/course/page?pageNum=1&pageSize=5') as any,
+        request.get('/material/page?pageNum=1&pageSize=5') as any,
+      ])
 
-      // Load knowledge points
-      const knowledgeRes = await request.get('/knowledge-point/page?pageNum=1&pageSize=1') as any
-      setStats(prev => ({ ...prev, knowledgeCount: knowledgeRes?.total || 0 }))
-
-      // Load materials
-      const materialRes = await request.get('/material/page?pageNum=1&pageSize=5') as any
-      const materials = materialRes?.records || []
-      setRecentMaterials(materials)
-      setStats(prev => ({ ...prev, materialCount: materialRes?.total || 0 }))
-
+      if (statsRes.status === 'fulfilled' && statsRes.value) {
+        setStats({
+          courseCount: statsRes.value.courseCount || 0,
+          knowledgeCount: statsRes.value.knowledgeCount || 0,
+          materialCount: statsRes.value.materialCount || 0,
+          activeTaskCount: statsRes.value.activeTaskCount || 0,
+          generatedCourseCount: statsRes.value.generatedCourseCount || 0,
+          generationRate: statsRes.value.generationRate || 0,
+          pptCount: statsRes.value.pptCount || 0,
+          videoCount: statsRes.value.videoCount || 0,
+        })
+      }
+      if (courseRes.status === 'fulfilled' && courseRes.value) {
+        setRecentCourses(courseRes.value?.records || [])
+      }
+      if (materialRes.status === 'fulfilled' && materialRes.value) {
+        setRecentMaterials(materialRes.value?.records || [])
+      }
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
-      // Demo data when not logged in
-      setRecentCourses([
-        { id: 1, title: 'Python机器学习实战', status: 'generated', createdAt: '2024-01-15' },
-        { id: 2, title: '深度学习入门指南', status: 'generated', createdAt: '2024-01-12' },
-        { id: 3, title: '数据结构与算法', status: 'draft', createdAt: '2024-01-10' },
-      ])
-      setRecentMaterials([
-        { id: 1, title: '机器学习PPT课件', materialType: 'ppt', status: 'generated' },
-        { id: 2, title: '深度学习视频教程', materialType: 'video', status: 'generated' },
-      ])
-      setStats({ courseCount: 12, knowledgeCount: 156, materialCount: 28, activeTaskCount: 5 })
     } finally {
       setLoading(false)
     }
   }
 
+  const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+    draft: { color: 'default', icon: <ClockCircleOutlined /> },
+    generating: { color: 'processing', icon: <ClockCircleOutlined /> },
+    generated: { color: 'success', icon: <CheckCircleOutlined /> },
+    failed: { color: 'error', icon: <ClockCircleOutlined /> },
+  }
+
   const courseColumns = [
     {
-      title: '课程标题',
+      title: '课程',
       dataIndex: 'title',
       key: 'title',
-      render: (title: string) => <a onClick={() => navigate('/courses')}>{title || '未命名课程'}</a>,
+      render: (title: string, record: Course) => (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+            <BookOutlined className="text-white text-xs" />
+          </div>
+          <span className="font-medium text-gray-700">{title || '未命名课程'}</span>
+        </div>
+      ),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 100,
       render: (status: string) => {
-        const config: Record<string, { color: string; label: string }> = {
-          draft: { color: 'default', label: '草稿' },
-          generating: { color: 'processing', label: '生成中' },
-          generated: { color: 'success', label: '已生成' },
-          failed: { color: 'error', label: '失败' },
-        }
-        const c = config[status] || { color: 'default', label: status }
-        return <Tag color={c.color}>{c.label}</Tag>
+        const sc = statusConfig[status] || statusConfig.draft
+        return <Tag icon={sc.icon} color={sc.color}>{status === 'generated' ? '已生成' : status === 'draft' ? '草稿' : status === 'generating' ? '生成中' : status}</Tag>
       },
     },
     {
-      title: '创建时间',
+      title: '时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 180,
+      width: 120,
+      render: (t: string) => <span className="text-gray-400 text-xs">{t?.substring(0, 10)}</span>,
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 80,
+      render: (_: any, record: Course) => (
+        <Button type="link" size="small" onClick={() => navigate(`/course/${record.id}`)}>
+          查看 <ArrowRightOutlined />
+        </Button>
+      ),
     },
   ]
 
   const materialColumns = [
     {
-      title: '标题',
+      title: '教材',
       dataIndex: 'title',
       key: 'title',
-      render: (title: string, record: any) => (
-        <Space>
-          {record.materialType === 'ppt' ? <FileTextOutlined style={{ color: 'orange' }} /> : <PlayCircleOutlined style={{ color: 'blue' }} />}
-          <span>{title || '未命名教材'}</span>
-        </Space>
+      render: (title: string, record: Material) => (
+        <div className="flex items-center gap-2">
+          {record.materialType === 'video'
+            ? <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center"><PlayCircleOutlined className="text-white text-xs" /></div>
+            : <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center"><FileTextOutlined className="text-white text-xs" /></div>
+          }
+          <span className="font-medium text-gray-700">{title || '未命名教材'}</span>
+        </div>
       ),
     },
     {
       title: '类型',
       dataIndex: 'materialType',
       key: 'materialType',
-      render: (type: string) => <Tag color={type === 'ppt' ? 'orange' : 'blue'}>{type?.toUpperCase()}</Tag>,
+      width: 80,
+      render: (t: string) => <Tag color={t === 'video' ? 'blue' : 'orange'}>{t === 'video' ? '视频' : 'PPT'}</Tag>,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'generated' ? 'success' : 'processing'}>{status}</Tag>
+      width: 90,
+      render: (s: string) => <Tag color={s === 'generated' ? 'success' : 'processing'}>{s === 'generated' ? '就绪' : '生成中'}</Tag>,
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 80,
+      render: (_: any, record: Material) => (
+        <Button type="link" size="small" onClick={() => navigate('/materials')}>
+          查看 <ArrowRightOutlined />
+        </Button>
       ),
     },
   ]
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">仪表盘</h1>
+  const quickActions = [
+    {
+      title: '添加知识点',
+      desc: '创建新的知识点内容',
+      icon: <ExperimentOutlined />,
+      color: '#52c41a',
+      bg: 'from-green-50 to-green-100',
+      path: '/knowledge',
+    },
+    {
+      title: '创建课程',
+      desc: '从知识点生成课程',
+      icon: <BookOutlined />,
+      color: '#1890ff',
+      bg: 'from-blue-50 to-blue-100',
+      path: '/courses',
+    },
+    {
+      title: '生成PPT',
+      desc: '制作教学课件',
+      icon: <FileTextOutlined />,
+      color: '#fa8c16',
+      bg: 'from-orange-50 to-orange-100',
+      path: '/materials',
+    },
+    {
+      title: '生成视频',
+      desc: '制作教学视频',
+      icon: <PlayCircleOutlined />,
+      color: '#722ed1',
+      bg: 'from-purple-50 to-purple-100',
+      path: '/courses',
+    },
+  ]
 
-      <Row gutter={16} className="mb-6">
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">欢迎回来 👋</h1>
+        <p className="text-gray-400 text-sm mt-1">这是您的教学数据概览</p>
+      </div>
+
+      {/* Stats Cards */}
+      <Row gutter={16}>
         <Col span={6}>
-          <Card loading={loading}>
-            <Statistic
-              title="课程总数"
-              value={stats.courseCount}
-              prefix={<BookOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card loading={loading}>
-            <Statistic
-              title="知识点总数"
-              value={stats.knowledgeCount}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card loading={loading}>
-            <div onClick={() => navigate('/materials')} className="cursor-pointer">
-              <Statistic
-                title="教材总数"
-                value={stats.materialCount}
-                prefix={<FolderOutlined />}
-                valueStyle={{ color: '#722ed1' }}
-              />
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/courses')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm mb-1">课程总数</p>
+                <Skeleton active={loading} paragraph={false}>
+                  <span className="text-3xl font-bold" style={{ color: '#1890ff' }}>{stats.courseCount}</span>
+                </Skeleton>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <BookOutlined className="text-blue-500 text-xl" />
+              </div>
             </div>
           </Card>
         </Col>
         <Col span={6}>
-          <Card loading={loading}>
-            <Statistic
-              title="学习增长率"
-              value={12.5}
-              prefix={<RiseOutlined />}
-              suffix="%"
-              valueStyle={{ color: '#fa8c16' }}
-            />
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/knowledge')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm mb-1">知识点</p>
+                <Skeleton active={loading} paragraph={false}>
+                  <span className="text-3xl font-bold" style={{ color: '#52c41a' }}>{stats.knowledgeCount}</span>
+                </Skeleton>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                <ExperimentOutlined className="text-green-500 text-xl" />
+              </div>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/materials')}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm mb-1">教材总数</p>
+                <Skeleton active={loading} paragraph={false}>
+                  <span className="text-3xl font-bold" style={{ color: '#722ed1' }}>{stats.materialCount}</span>
+                </Skeleton>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                <FolderOutlined className="text-purple-500 text-xl" />
+              </div>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm mb-1">课程生成率</p>
+                <Skeleton active={loading} paragraph={false}>
+                  <span className="text-3xl font-bold" style={{ color: '#fa8c16' }}>
+                    {stats.generationRate}%
+                  </span>
+                </Skeleton>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+                <ThunderboltOutlined className="text-orange-500 text-xl" />
+              </div>
+            </div>
           </Card>
         </Col>
       </Row>
 
+      {/* Detailed Stats Row */}
+      <Row gutter={16}>
+        <Col span={6}>
+          <Card className="border-0 shadow-sm" size="small">
+            <Skeleton active={loading} paragraph={false}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs mb-1">已生成课程</p>
+                  <span className="text-lg font-bold text-green-600">{stats.generatedCourseCount}</span>
+                </div>
+                <CheckCircleOutlined className="text-green-500 text-lg" />
+              </div>
+            </Skeleton>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="border-0 shadow-sm" size="small">
+            <Skeleton active={loading} paragraph={false}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs mb-1">进行中任务</p>
+                  <span className="text-lg font-bold text-blue-600">{stats.activeTaskCount}</span>
+                </div>
+                <ClockCircleOutlined className="text-blue-500 text-lg" />
+              </div>
+            </Skeleton>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="border-0 shadow-sm" size="small">
+            <Skeleton active={loading} paragraph={false}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs mb-1">PPT教材</p>
+                  <span className="text-lg font-bold text-orange-600">{stats.pptCount}</span>
+                </div>
+                <FileTextOutlined className="text-orange-500 text-lg" />
+              </div>
+            </Skeleton>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card className="border-0 shadow-sm" size="small">
+            <Skeleton active={loading} paragraph={false}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs mb-1">视频教材</p>
+                  <span className="text-lg font-bold text-purple-600">{stats.videoCount}</span>
+                </div>
+                <PlayCircleOutlined className="text-purple-500 text-lg" />
+              </div>
+            </Skeleton>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Quick Actions */}
+      <Card title={<span className="font-semibold">⚡ 快捷操作</span>} className="shadow-sm">
+        <Row gutter={[16, 16]}>
+          {quickActions.map((action, idx) => (
+            <Col span={6} key={idx}>
+              <div
+                onClick={() => navigate(action.path)}
+                className={`cursor-pointer rounded-xl border-0 bg-gradient-to-br ${action.bg} p-5 hover:shadow-md transition-all hover:-translate-y-0.5`}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                  style={{ background: action.color + '15' }}
+                >
+                  <span style={{ color: action.color, fontSize: 20 }}>{action.icon}</span>
+                </div>
+                <div className="font-semibold text-gray-800 text-sm mb-1">{action.title}</div>
+                <div className="text-gray-400 text-xs">{action.desc}</div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
+
+      {/* Recent Lists */}
       <Row gutter={16}>
         <Col span={12}>
           <Card
-            title="最近课程"
-            extra={<Button type="link" onClick={() => navigate('/courses')}>查看更多</Button>}
+            title={<span className="font-semibold">📚 最近课程</span>}
+            extra={<Button type="link" onClick={() => navigate('/courses')}>查看全部 <ArrowRightOutlined /></Button>}
+            className="shadow-sm"
+            styles={{ body: { padding: 0 } }}
           >
             <Table
               columns={courseColumns}
@@ -177,13 +378,16 @@ const Dashboard = () => {
               rowKey="id"
               pagination={false}
               size="small"
+              loading={loading}
             />
           </Card>
         </Col>
         <Col span={12}>
           <Card
-            title="最近教材"
-            extra={<Button type="link" onClick={() => navigate('/materials')}>查看更多</Button>}
+            title={<span className="font-semibold">📦 最近教材</span>}
+            extra={<Button type="link" onClick={() => navigate('/materials')}>查看全部 <ArrowRightOutlined /></Button>}
+            className="shadow-sm"
+            styles={{ body: { padding: 0 } }}
           >
             <Table
               columns={materialColumns}
@@ -191,25 +395,8 @@ const Dashboard = () => {
               rowKey="id"
               pagination={false}
               size="small"
+              loading={loading}
             />
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={16} className="mt-6">
-        <Col span={24}>
-          <Card title="快速开始">
-            <Space size="large">
-              <Button type="primary" size="large" onClick={() => navigate('/knowledge')}>
-                添加知识点
-              </Button>
-              <Button size="large" onClick={() => navigate('/courses')}>
-                创建课程
-              </Button>
-              <Button size="large" onClick={() => navigate('/settings')}>
-                配置AI
-              </Button>
-            </Space>
           </Card>
         </Col>
       </Row>

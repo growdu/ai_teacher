@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Tag, Spin, Descriptions, Collapse, message, Space, Modal } from 'antd'
-import { ArrowLeftOutlined, FileTextOutlined, VideoCameraOutlined } from '@ant-design/icons'
+import {
+  Card, Button, Tag, Spin, message, Space, Modal,
+  Breadcrumb, Descriptions, Empty, Tooltip, Divider, Collapse
+} from 'antd'
+import {
+  ArrowLeftOutlined, FileTextOutlined, VideoCameraOutlined,
+  CheckCircleOutlined, ClockCircleOutlined, SyncOutlined,
+  CalendarOutlined, BookOutlined, ThunderboltOutlined, EditOutlined
+} from '@ant-design/icons'
 import request from '@/api/request'
 
 interface Course {
@@ -16,16 +23,16 @@ interface Course {
 
 interface Chapter {
   title: string
-  duration: number
+  duration?: number
   keyPoints: string[]
-  teachingNotes: string
+  teachingNotes?: string
 }
 
 interface Outline {
   title: string
-  description: string
+  description?: string
   chapters: Chapter[]
-  totalDuration: number
+  totalDuration?: number
 }
 
 const CourseDetailPage = () => {
@@ -47,8 +54,6 @@ const CourseDetailPage = () => {
     setLoading(true)
     try {
       const res = await request.get(`/course/${courseId}`) as any
-      // Interceptor may return unwrapped data (when body.data was the object itself)
-      // or the full R wrapper. Check by looking for the 'code' field.
       const courseData = res && res.code === 200 ? res.data : (res || null)
       if (courseData) {
         setCourse(courseData)
@@ -63,12 +68,12 @@ const CourseDetailPage = () => {
           }
         }
       } else {
-        message.error(res.message || '加载失败')
-        navigate('/course')
+        message.error(res?.message || '加载失败')
+        navigate('/courses')
       }
-    } catch (error) {
+    } catch {
       message.error('加载课程详情失败')
-      navigate('/course')
+      navigate('/courses')
     } finally {
       setLoading(false)
     }
@@ -78,168 +83,258 @@ const CourseDetailPage = () => {
     if (!course) return
     setGeneratingVideo(true)
     try {
-      const res = await request.post('/material/video/generate', {
+      await request.post('/material/video/generate', {
         courseId: course.id,
         script: videoScript || course.script,
       })
-      message.success('视频生成任务已创建，请在任务列表中查看进度')
+      message.success('视频生成任务已创建')
       setVideoModalVisible(false)
       navigate('/tasks')
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '视频生成失败')
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || '视频生成失败')
     } finally {
       setGeneratingVideo(false)
     }
   }
 
   if (loading) {
-    return <Spin tip="加载中..." style={{ marginTop: 100, textAlign: 'center' }} />
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Spin tip="加载课程内容..." size="large" />
+      </div>
+    )
   }
 
   if (!course) return null
 
-  const statusMap: Record<string, { color: string; label: string }> = {
-    draft: { color: 'default', label: '草稿' },
-    generating: { color: 'processing', label: '生成中' },
-    generated: { color: 'success', label: '已生成' },
-    failed: { color: 'error', label: '失败' },
+  const statusConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+    draft: { color: 'default', icon: <ClockCircleOutlined />, label: '草稿' },
+    generating: { color: 'processing', icon: <SyncOutlined spin />, label: '生成中' },
+    generated: { color: 'success', icon: <CheckCircleOutlined />, label: '已生成' },
+    failed: { color: 'error', icon: <ClockCircleOutlined />, label: '失败' },
   }
+  const sc = statusConfig[course.status] || statusConfig.draft
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/course')}>
+    <div className="space-y-5">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { title: <a onClick={() => navigate('/')}>首页</a> },
+          { title: <a onClick={() => navigate('/courses')}>课程管理</a> },
+          { title: course.title || '课程详情' },
+        ]}
+      />
+
+      {/* Header Card */}
+      <Card
+        className="shadow-sm"
+        styles={{ body: { padding: 0 } }}
+      >
+        <div
+          className="h-36 relative flex items-center px-8"
+          style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          }}
+        >
+          <div className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 30% 70%, white 0%, transparent 40%), radial-gradient(circle at 70% 30%, white 0%, transparent 40%)',
+            }}
+          />
+          <div className="relative z-10 flex items-center gap-5 w-full">
+            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shadow-lg">
+              <BookOutlined className="text-white text-3xl" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-white text-2xl font-bold mb-1 drop-shadow">
+                {course.title || '未命名课程'}
+              </h1>
+              <Space className="mt-2">
+                <Tag icon={sc.icon} color={sc.color} className="bg-white/20 border-0 text-white">
+                  {sc.label}
+                </Tag>
+                <span className="text-white/70 text-sm flex items-center gap-1">
+                  <CalendarOutlined /> {course.createdAt?.substring(0, 10)}
+                </span>
+              </Space>
+            </div>
+            <Space className="relative z-10">
+              <Button
+                icon={<FileTextOutlined />}
+                onClick={() => navigate(`/quiz?courseId=${course.id}`)}
+                className="shadow-lg border-0"
+                style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+              >
+                生成测验
+              </Button>
+              <Button
+                icon={<VideoCameraOutlined />}
+                onClick={() => { setVideoScript(course?.script || ''); setVideoModalVisible(true) }}
+                className="shadow-lg border-0"
+                style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+              >
+                生成视频
+              </Button>
+            </Space>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <Descriptions column={3} size="small">
+            <Descriptions.Item label={<span className="text-gray-400"><BookOutlined className="mr-1" />课程ID</span>}>
+              <span className="text-gray-500">#{course.id}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label={<span className="text-gray-400">知识点ID</span>}>
+              <span className="text-gray-500">#{course.knowledgePointId}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label={<span className="text-gray-400">状态</span>}>
+              <Tag icon={sc.icon} color={sc.color}>{sc.label}</Tag>
+            </Descriptions.Item>
+          </Descriptions>
+        </div>
+      </Card>
+
+      {/* Course Outline */}
+      {outlineData ? (
+        <Card title={
+          <span className="text-lg font-semibold flex items-center gap-2">
+            <ThunderboltOutlined className="text-indigo-500" />
+            课程大纲
+            {outlineData.totalDuration && (
+              <Tag className="ml-2 text-xs">{outlineData.totalDuration} 分钟</Tag>
+            )}
+          </span>
+        } className="shadow-sm">
+          {outlineData.description && (
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-5 border border-indigo-100">
+              <p className="text-gray-600 leading-relaxed">{outlineData.description}</p>
+            </div>
+          )}
+
+          <Collapse
+            bordered={false}
+            className="bg-transparent"
+            expandIconPosition="start"
+            items={outlineData.chapters?.map((ch: Chapter, idx: number) => ({
+              key: String(idx),
+              label: (
+                <div className="flex items-center justify-between w-full pr-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-800">{ch.title}</span>
+                      {ch.duration && (
+                        <span className="text-gray-400 text-xs ml-2">{ch.duration}分钟</span>
+                      )}
+                    </div>
+                  </div>
+                  {ch.keyPoints && ch.keyPoints.length > 0 && (
+                    <Tag color="blue" className="text-xs">{ch.keyPoints.length}个重点</Tag>
+                  )}
+                </div>
+              ),
+              children: (
+                <div className="space-y-3 pl-1">
+                  {ch.keyPoints && ch.keyPoints.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-indigo-400 inline-block" />
+                        核心要点
+                      </h5>
+                      <div className="space-y-1.5">
+                        {ch.keyPoints.map((kp, i) => (
+                          <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                            <CheckCircleOutlined className="text-green-500 text-xs mt-1 shrink-0" />
+                            <span>{kp}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {ch.teachingNotes && (
+                    <div>
+                      <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-orange-400 inline-block" />
+                        教学备注
+                      </h5>
+                      <div className="bg-orange-50 rounded-lg p-3 text-sm text-orange-800 leading-relaxed">
+                        {ch.teachingNotes}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ),
+            })) || []}
+          />
+        </Card>
+      ) : (
+        <Card className="shadow-sm text-center py-12">
+          <Empty description={<span className="text-gray-400">暂无课程大纲</span>} />
+        </Card>
+      )}
+
+      {/* Script */}
+      {course.script && (
+        <Card
+          title={
+            <span className="text-lg font-semibold flex items-center gap-2">
+              <EditOutlined className="text-indigo-500" />
+              讲稿脚本
+            </span>
+          }
+          className="shadow-sm"
+        >
+          <div
+            className="bg-gray-50 rounded-xl p-5 text-sm text-gray-700 leading-loose whitespace-pre-wrap border border-gray-100 max-h-80 overflow-y-auto"
+          >
+            {course.script}
+          </div>
+        </Card>
+      )}
+
+      {/* Back button */}
+      <div className="flex justify-start">
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/courses')} size="large">
           返回课程列表
         </Button>
       </div>
 
-      <Card
-        title={<span style={{ fontSize: 20 }}>{course.title}</span>}
-        extra={
-          <Space>
-            <Tag color={statusMap[course.status]?.color || 'default'}>
-              {statusMap[course.status]?.label || course.status}
-            </Tag>
-            <Button
-              type="primary"
-              icon={<FileTextOutlined />}
-              onClick={() => navigate(`/quiz?courseId=${course.id}`)}
-            >
-              生成测验
-            </Button>
-            <Button
-              icon={<VideoCameraOutlined />}
-              onClick={() => {
-                setVideoScript(course.script || '')
-                setVideoModalVisible(true)
-              }}
-            >
-              生成视频
-            </Button>
-          </Space>
-        }
-      >
-        <Descriptions column={2} style={{ marginBottom: 24 }}>
-          <Descriptions.Item label="课程ID">{course.id}</Descriptions.Item>
-          <Descriptions.Item label="创建时间">{course.createdAt}</Descriptions.Item>
-          <Descriptions.Item label="知识点ID">{course.knowledgePointId}</Descriptions.Item>
-          <Descriptions.Item label="状态">{statusMap[course.status]?.label || course.status}</Descriptions.Item>
-        </Descriptions>
-
-        {outlineData && (
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ marginBottom: 12 }}>课程大纲</h3>
-            {outlineData.description && (
-              <p style={{ color: '#666', marginBottom: 16 }}>{outlineData.description}</p>
-            )}
-            {outlineData.totalDuration && (
-              <p style={{ color: '#888', marginBottom: 16 }}>总时长：{outlineData.totalDuration} 分钟</p>
-            )}
-            <Collapse
-              items={
-                outlineData.chapters?.map((ch: Chapter, idx: number) => ({
-                  key: String(idx),
-                  label: `第${idx + 1}章：${ch.title}${ch.duration ? ` (${ch.duration}分钟)` : ''}`,
-                  children: (
-                    <div>
-                      {ch.keyPoints && ch.keyPoints.length > 0 && (
-                        <div style={{ marginBottom: 8 }}>
-                          <strong>重点：</strong>
-                          <ul style={{ margin: '8px 0' }}>
-                            {ch.keyPoints.map((kp, i) => (
-                              <li key={i}>{kp}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {ch.teachingNotes && (
-                        <div>
-                          <strong>教学备注：</strong>
-                          <p style={{ color: '#555', margin: '8px 0' }}>{ch.teachingNotes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ),
-                })) || []
-              }
-            />
-          </div>
-        )}
-
-        {course.script && (
-          <div>
-            <h3 style={{ marginBottom: 12 }}>讲稿脚本</h3>
-            <Card
-              style={{
-                background: '#f5f5f5',
-                whiteSpace: 'pre-wrap',
-                fontSize: 14,
-                lineHeight: 1.8,
-                maxHeight: 500,
-                overflow: 'auto',
-              }}
-            >
-              {course.script}
-            </Card>
-          </div>
-        )}
-      </Card>
-
+      {/* Video Generation Modal */}
       <Modal
-        title="生成教学视频"
+        title={<span className="text-lg font-semibold flex items-center gap-2">
+          <VideoCameraOutlined className="text-blue-500" />生成教学视频
+        </span>}
         open={videoModalVisible}
         onCancel={() => setVideoModalVisible(false)}
         footer={null}
         destroyOnClose
+        width={600}
       >
-        <div className="py-4">
-          <p className="mb-4 text-gray-500">
-            使用课程讲稿脚本生成教学视频。如需自定义脚本内容，可在下方的文本框中编辑。
-          </p>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>讲稿脚本</label>
+        <div className="py-4 space-y-4">
+          <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700 border border-blue-100">
+            使用课程讲稿脚本生成教学视频。如需自定义脚本内容，可在下方文本框中编辑。
+          </div>
+          <div>
+            <label className="block font-medium text-gray-700 mb-2">讲稿脚本</label>
             <textarea
               rows={8}
-              style={{
-                width: '100%',
-                border: '1px solid #d9d9d9',
-                borderRadius: 6,
-                padding: 8,
-                fontSize: 14,
-                resize: 'vertical',
-              }}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm leading-relaxed focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
               value={videoScript}
               onChange={e => setVideoScript(e.target.value)}
               placeholder="输入或编辑视频讲稿脚本..."
             />
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 pt-2">
             <Button onClick={() => setVideoModalVisible(false)}>取消</Button>
             <Button
               type="primary"
               icon={<VideoCameraOutlined />}
               loading={generatingVideo}
               onClick={handleGenerateVideo}
+              className="shadow-lg"
             >
               开始生成视频
             </Button>
