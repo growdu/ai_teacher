@@ -242,8 +242,8 @@ public class PptGenerationService {
 
     private String uploadPptFile(File file, String title) {
         try {
-            String objectName = "ppt/" + System.currentTimeMillis() + ".pptx";
-            fileStorageService.uploadFile(file, "ppt", title + ".pptx");
+            // uploadFile returns the actual object name stored in MinIO (ppt/UUID.pptx)
+            String objectName = fileStorageService.uploadFile(file, "ppt", title + ".pptx");
             return fileStorageService.getFileUrl(objectName);
         } catch (Exception e) {
             log.error("Failed to upload PPT: {}", e.getMessage());

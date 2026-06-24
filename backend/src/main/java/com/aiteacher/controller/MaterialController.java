@@ -69,9 +69,8 @@ public class MaterialController {
      */
     @GetMapping("/task/{taskId}")
     public R<Map<String, Object>> getTaskStatus(@PathVariable Long taskId) {
-        return R.ok(Map.of(
-                "taskId", taskId
-        ));
+        // Delegate to VideoGenerationService for real status
+        return R.ok(videoGenerationService.getTaskStatus(taskId));
     }
 
     /**

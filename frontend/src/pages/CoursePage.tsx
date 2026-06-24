@@ -112,8 +112,8 @@ const CoursePage = () => {
   // 加载知识点列表（用于创建课程表单）
   const loadKnowledgePoints = async () => {
     try {
-      const res = await request.get('/knowledge-point/page?pageNum=1&pageSize=100')
-      setKnowledgePoints(res.data?.records || [])
+      const res = await request.get('/knowledge-point/page?pageNum=1&pageSize=100') as any
+      setKnowledgePoints(res?.records || [])
     } catch (error) {
       message.error('加载知识点失败')
     }
@@ -128,7 +128,7 @@ const CoursePage = () => {
         title: values.title || undefined,
         chapterCount: values.chapterCount || undefined,
       }) as any
-      if (res.code === 200) {
+      if (res && res.code === 200) {
         message.success('课程生成成功')
         setCreateModalVisible(false)
         form.resetFields()
@@ -152,7 +152,7 @@ const CoursePage = () => {
         courseId: selectedCourseId,
         template: pptTemplate,
       }) as any
-      if (res.code === 200) {
+      if (res && res.code === 200) {
         message.success('PPT生成成功')
         setPptTemplateModal(false)
         loadData()
@@ -169,7 +169,7 @@ const CoursePage = () => {
   const handleGenerateVideo = async (courseId: number) => {
     try {
       const res = await request.post('/material/video/generate', { courseId }) as any
-      if (res.code === 200) {
+      if (res && res.code === 200) {
         message.success('视频生成任务已创建')
         const taskId = res.data?.taskId
         if (taskId) {
@@ -186,8 +186,8 @@ const CoursePage = () => {
   const checkVideoStatus = (taskId: number) => {
     const interval = setInterval(async () => {
       try {
-        const res = await request.get(`/task/${taskId}`)
-        const status = res.data?.status
+        const res = await request.get(`/material/task/${taskId}`) as any
+        const status = res?.status
         if (status === 'completed') {
           clearInterval(interval)
           message.success('视频生成完成')
@@ -207,9 +207,9 @@ const CoursePage = () => {
     try {
       const res = await request.get('/course/page', {
         params: { pageNum, pageSize },
-      })
-      setData(res.data?.records || [])
-      setTotal(res.data?.total || 0)
+      }) as any
+      setData(res?.records || [])
+      setTotal(res?.total || 0)
     } catch (error) {
       message.error('加载数据失败')
     } finally {

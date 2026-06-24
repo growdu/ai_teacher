@@ -92,6 +92,17 @@ public class FileStorageService {
         }
     }
 
+    /**
+     * Get file as byte array from MinIO storage
+     */
+    public byte[] getFileBytes(String objectName) {
+        try (InputStream stream = getFile(objectName)) {
+            return stream.readAllBytes();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get file bytes: " + objectName, e);
+        }
+    }
+
     public String getFileUrl(String objectName) {
         try {
             // Try SDK presigned URL first

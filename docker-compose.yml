@@ -78,7 +78,7 @@ services:
     networks:
       - ai-teacher
     ports:
-      - "127.0.0.1:8080:8080"  # Only localhost — accessed via Nginx
+      - "8080:8080"  # External access for direct API calls
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ai_teacher
       SPRING_DATASOURCE_USERNAME: postgres
@@ -136,7 +136,7 @@ services:
     networks:
       - ai-teacher
     ports:
-      - "127.0.0.1:3000:80"  # Host Nginx → frontend via localhost:3000
+      - "3000:80"  # External access for web UI
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/health || exit 1"]
       interval: 15s

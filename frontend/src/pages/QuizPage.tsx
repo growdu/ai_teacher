@@ -92,7 +92,7 @@ const QuizPage = () => {
         type: values.type || 'mixed',
         count: values.count || 5,
       }) as any
-      if (res.code === 200) {
+      if (res && res.code === 200) {
         setQuizResult(res.data)
         setShowModal(false)
         form.resetFields()

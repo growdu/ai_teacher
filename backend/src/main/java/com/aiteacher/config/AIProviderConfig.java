@@ -60,6 +60,14 @@ public class AIProviderConfig {
 
     @Bean
     public void configureAIProviders() {
+        // Force mock mode if enabled - skip all real providers to avoid 401 errors
+        if (mockEnabled) {
+            log.info("AI Mock mode enabled - using mock provider only");
+            MockLLMProvider mockProvider = new MockLLMProvider();
+            registry.registerLLMProvider("mock", mockProvider);
+            return;
+        }
+
         // Register OpenAI provider if API key is set
         if (openaiApiKey != null && !openaiApiKey.isEmpty()) {
             OpenAILLMProvider openaiProvider = new OpenAILLMProvider(openaiApiKey, openaiBaseUrl, openaiModel);
@@ -88,23 +96,17 @@ public class AIProviderConfig {
             log.info("Registered MiniMax LLM provider: {}", minimaxModel);
         }
 
-        // Log warning if no providers registered
-        if (registry.getLLMProviders().isEmpty()) {
-            log.warn("No LLM providers registered. Please configure at least one AI provider.");
-        }
-
         // Register MiniMax Video provider if API key is set
         if (minimaxVideoApiKey != null && !minimaxVideoApiKey.isEmpty()) {
             MiniMaxVideoProvider videoProvider = new MiniMaxVideoProvider(minimaxVideoApiKey);
             log.info("Registered MiniMax Video provider");
         }
 
-        // Register Mock provider as fallback for development/demo
-        if (mockEnabled || registry.getLLMProviders().isEmpty()) {
+        // Register Mock provider as fallback only when no real providers are available
+        if (registry.getLLMProviders().isEmpty()) {
+            log.warn("No LLM providers registered - using Mock provider");
             MockLLMProvider mockProvider = new MockLLMProvider();
             registry.registerLLMProvider("mock", mockProvider);
-            log.info("Registered Mock LLM provider (enabled={}, noProviders={})",
-                    mockEnabled, registry.getLLMProviders().size() == 1);
         }
     }
 

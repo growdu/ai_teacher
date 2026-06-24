@@ -113,39 +113,32 @@ public class MockLLMProvider extends AbstractLLMProvider {
 
     private String generateCourseResponse(String prompt) {
         return """
-        # AI Teacher Studio - 课程生成结果（模拟数据）
-
-        ## 课程信息
-        - **课程名称**：人工智能导论
-        - **适用年级**：高中一年级
-        - **课时数**：12课时
-        - **教学目标**：使学生理解人工智能的基本概念、发展历程及其在日常生活中的应用
-
-        ## 课程大纲
-
-        ### 第一章：人工智能基础（4课时）
-        - 1.1 什么是人工智能
-        - 1.2 人工智能的发展历程
-        - 1.3 机器学习与深度学习基础
-        - 1.4 神经网络基本原理
-
-        ### 第二章：人工智能应用（4课时）
-        - 2.1 计算机视觉
-        - 2.2 自然语言处理
-        - 2.3 推荐系统
-        - 2.4 自动驾驶技术
-
-        ### 第三章：人工智能伦理与未来（4课时）
-        - 3.1 AI伦理与隐私保护
-        - 3.2 AI对就业的影响
-        - 3.3 AI安全与风险防范
-        - 3.4 人工智能未来发展趋势
-
-        ## 教学方法建议
-        - 理论讲解 + 实践操作相结合
-        - 引入生活中的AI应用案例
-        - 小组讨论促进学生思考
-        """;
+                {
+                  "title": "电磁感应原理",
+                  "description": "本课程系统讲解法拉第电磁感应定律和楞次定律，使学生理解电磁感应的基本原理及其应用。",
+                  "totalDuration": 180,
+                  "chapters": [
+                    {
+                      "title": "电磁感应基础",
+                      "duration": 45,
+                      "keyPoints": ["法拉第电磁感应定律", "感应电动势的定义", "磁通量的概念"],
+                      "teachingNotes": "通过实验演示引入概念"
+                    },
+                    {
+                      "title": "楞次定律",
+                      "duration": 60,
+                      "keyPoints": ["感应电流方向的判断", "增反减同原则", "能量守恒与电磁感应"],
+                      "teachingNotes": "结合生活实例讲解"
+                    },
+                    {
+                      "title": "电磁感应应用",
+                      "duration": 75,
+                      "keyPoints": ["发电机原理", "变压器原理", "电磁炉原理"],
+                      "teachingNotes": "理论与实践相结合"
+                    }
+                  ]
+                }
+                """;
     }
 
     private String generateQuizResponse(String prompt) {

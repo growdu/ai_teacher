@@ -24,20 +24,20 @@ const Dashboard = () => {
     setLoading(true)
     try {
       // Load courses
-      const courseRes = await request.get('/course/page?pageNum=1&pageSize=5')
-      const courses = courseRes.data?.records || []
+      const courseRes = await request.get('/course/page?pageNum=1&pageSize=5') as any
+      const courses = courseRes?.records || []
       setRecentCourses(courses)
-      setStats(prev => ({ ...prev, courseCount: courseRes.data?.total || 0 }))
+      setStats(prev => ({ ...prev, courseCount: courseRes?.total || 0 }))
 
       // Load knowledge points
-      const knowledgeRes = await request.get('/knowledge-point/page?pageNum=1&pageSize=1')
-      setStats(prev => ({ ...prev, knowledgeCount: knowledgeRes.data?.total || 0 }))
+      const knowledgeRes = await request.get('/knowledge-point/page?pageNum=1&pageSize=1') as any
+      setStats(prev => ({ ...prev, knowledgeCount: knowledgeRes?.total || 0 }))
 
       // Load materials
-      const materialRes = await request.get('/material/page?pageNum=1&pageSize=5')
-      const materials = materialRes.data?.records || []
+      const materialRes = await request.get('/material/page?pageNum=1&pageSize=5') as any
+      const materials = materialRes?.records || []
       setRecentMaterials(materials)
-      setStats(prev => ({ ...prev, materialCount: materialRes.data?.total || 0 }))
+      setStats(prev => ({ ...prev, materialCount: materialRes?.total || 0 }))
 
     } catch (error) {
       console.error('Failed to load dashboard data:', error)

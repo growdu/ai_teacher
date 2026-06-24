@@ -56,11 +56,20 @@ public class AIConfigService {
     @Value("${ai.qwen.model:}")
     private String qwenModel;
 
+    @Value("${ai.mock.enabled:false}")
+    private boolean mockEnabled;
+
     @PostConstruct
     public void initProviders() {
+        // If mock mode enabled, skip registering real providers entirely
+        if (mockEnabled) {
+            log.info("Mock mode enabled - skipping real provider registration in AIConfigService");
+            return;
+        }
+
         // Initialize from config file first (default providers)
         initDefaultProviders();
-        
+
         // Then initialize from database (tenant-specific providers)
         initDatabaseProviders();
     }

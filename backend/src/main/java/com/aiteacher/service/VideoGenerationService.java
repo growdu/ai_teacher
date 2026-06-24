@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -58,6 +59,13 @@ public class VideoGenerationService {
 
     @Autowired(required = false)
     private MiniMaxVideoProvider miniMaxVideoProvider;
+
+    /**
+     * Get task status - delegates to AsyncTaskService
+     */
+    public Map<String, Object> getTaskStatus(Long taskId) {
+        return asyncTaskService.getTaskStatus(taskId);
+    }
 
     /**
      * Generate video asynchronously
@@ -637,9 +645,9 @@ public class VideoGenerationService {
     private String uploadVideo(String videoPath) {
         try {
             File videoFile = new File(videoPath);
-            String objectName = "video/" + UUID.randomUUID().toString() + ".mp4";
-            fileStorageService.uploadFile(videoFile, "video", videoFile.getName());
-            
+            // uploadFile returns the actual object name stored in MinIO (video/UUID.mp4)
+            String objectName = fileStorageService.uploadFile(videoFile, "video", videoFile.getName());
+
             return fileStorageService.getFileUrl(objectName);
         } catch (Exception e) {
             log.error("Video upload failed: {}", e.getMessage());

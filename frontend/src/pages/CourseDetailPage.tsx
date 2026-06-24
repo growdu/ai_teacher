@@ -47,13 +47,16 @@ const CourseDetailPage = () => {
     setLoading(true)
     try {
       const res = await request.get(`/course/${courseId}`) as any
-      if (res.code === 200) {
-        setCourse(res.data)
-        if (res.data?.outline) {
+      // Interceptor may return unwrapped data (when body.data was the object itself)
+      // or the full R wrapper. Check by looking for the 'code' field.
+      const courseData = res && res.code === 200 ? res.data : (res || null)
+      if (courseData) {
+        setCourse(courseData)
+        if (courseData.outline) {
           try {
-            const parsed = typeof res.data.outline === 'string'
-              ? JSON.parse(res.data.outline)
-              : res.data.outline
+            const parsed = typeof courseData.outline === 'string'
+              ? JSON.parse(courseData.outline)
+              : courseData.outline
             setOutlineData(parsed)
           } catch {
             setOutlineData(null)
@@ -75,7 +78,7 @@ const CourseDetailPage = () => {
     if (!course) return
     setGeneratingVideo(true)
     try {
-      const res = await request.post<any, { data: number }>('/video/generate', {
+      const res = await request.post('/material/video/generate', {
         courseId: course.id,
         script: videoScript || course.script,
       })

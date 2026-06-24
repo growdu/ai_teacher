@@ -138,8 +138,8 @@ const KnowledgePage = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await request.get('/knowledge-point/page?pageNum=1&pageSize=100')
-      setData(res.data?.records || [])
+      const res = await request.get('/knowledge-point/page?pageNum=1&pageSize=100') as any
+      setData(res?.records || [])
     } catch (error) {
       message.error('加载数据失败')
     } finally {
