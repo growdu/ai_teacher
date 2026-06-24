@@ -98,7 +98,7 @@ PPT 内容经 AI 二次处理，每张幻灯片包含足够的教学文字、视
 @Data
 @Builder
 public class SlideContent {
-    private String slideType;    // text | diagram | case | quote | quiz | activity | reflection | comic | infographic | timeline
+    private String slideType;    // text | diagram | case | quote | quiz | activity | reflection | comic | infographic | timeline | problem | concept | exercise | derivation
     private String title;         // 幻灯片标题
     private String mainBody;      // 主要阐述文字（100-300字）
     private List<String> bullets; // 要点列表
@@ -149,7 +149,7 @@ public class PptGenerationResult {
 
 ```java
 public static class SlideData {
-    private String type;    // 新增: text|diagram|case|quote|quiz|activity|reflection|comic|infographic|timeline
+    private String type;    // 新增: text|diagram|case|quote|quiz|activity|reflection|comic|infographic|timeline|problem|concept|exercise|derivation
     private String title;
     private String content;
     private List<String> contentList;
@@ -191,15 +191,123 @@ public interface AIEnrichmentService {
 
 ### 5.2 提示词设计（趣味性 & 生动性增强版）
 
-**核心策略转变**：从"文字描述"转向"视觉叙事"
+#### 5.2.1 文科 vs 理科差异化策略
 
-| 维度 | 旧策略（文字主导） | 新策略（视觉主导） |
-|------|-----------------|------------------|
-| 内容载体 | 段落文字 + 要点列表 | 信息图 + 漫画 + 流程图 + 图表 |
-| 叙事方式 | 知识点平铺 | 故事弧线（问题→探索→发现→应用） |
-| 信息密度 | 高（满屏文字） | 低（每页 1 个核心信息 + 视觉） |
-| 趣味元素 | 无 | 知识漫画、案例故事、名言、思考题 |
-| 记忆设计 | 重复阅读 | 颜色编码、图标系统、对比布局 |
+> **理科（数学/物理/化学）必须保证准确性优先**，不能为了趣味性牺牲知识正确性。
+
+| 维度 | 文科（历史/语文/政治） | 理科（数学/物理/化学） |
+|------|----------------------|----------------------|
+| 首要原则 | 趣味性 + 价值观引导 | **准确性 + 逻辑严谨** |
+| 叙事弧 | 故事线（人物/事件/情感） | **问题驱动弧**（问题→探究→结论→应用） |
+| 知识呈现 | 叙述为主，信息图为辅 | **概念图+公式+例题** 三位一体 |
+| 测验比重 | 10% | **20-30%**（每节必有随堂练习） |
+| 错误设计 | 案例警示 | **故意设错→学生辨析→正确理解** |
+| 趣味元素 | 故事/漫画/名言 | **实验模拟/推导动画/生活中的现象** |
+| AI 提示词 | 允许适当的文学化表达 | **严格禁止比喻掩盖定义；公式必须有单位** |
+
+#### 5.2.2 理科「问题驱动四步法」幻灯片模板
+
+理科每节内容必须严格遵循以下四步结构，**不可跳过任意一步**：
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  步骤一：问题引入（Problem Introduction）                    │
+│  ─────────────────────────────────────────────────────────  │
+│  用一个生活中的真实问题/现象引入，激发好奇心                 │
+│  slideType: "problem" | 时长: 2min | 文字: ≤3行            │
+│                                                              │
+│  典型模板：                                                  │
+│  "一个足球被踢出后，它的轨迹是什么样的？"                   │
+│  "如何测量一栋大楼的高度？"                                  │
+│  "为什么天空是蓝色的？"                                      │
+└────────────────────────────────────────────────────────────┘
+                              ↓
+┌────────────────────────────────────────────────────────────┐
+│  步骤二：概念讲解（Concept Teaching）                        │
+│  ─────────────────────────────────────────────────────────  │
+│  揭示原理/公式/定理，配合概念图和公式推导                     │
+│  slideType: "concept" | 时长: 5-8min | 文字: ≤3行          │
+│                                                              │
+│  典型模板：                                                  │
+│  [概念图/流程图] + [核心公式] + [关键要点3条]               │
+│  严禁用比喻替代定义                                          │
+└────────────────────────────────────────────────────────────┘
+                              ↓
+┌────────────────────────────────────────────────────────────┐
+│  步骤三：例题演练（Practice & Exercise）                     │
+│  ─────────────────────────────────────────────────────────  │
+│  先示范1道典型例题，再给出2-3道变式训练题                   │
+│  slideType: "exercise" | 时长: 5-8min | 题目必须有完整解答   │
+│                                                              │
+│  典型模板：                                                  │
+│  例题展示 → 分步解答 → 学生思考（留白）→ 公布答案           │
+│  变式题：基础题1道 + 中等题1道 + 挑战题1道                  │
+└────────────────────────────────────────────────────────────┘
+                              ↓
+┌────────────────────────────────────────────────────────────┐
+│  步骤四：总结提升（Summary & Reflection）                     │
+│  ─────────────────────────────────────────────────────────  │
+│  用一句话总结核心知识点 + 知识结构图 + 课后思考题             │
+│  slideType: "summary" | 时长: 2min | 文字: ≤3行             │
+│                                                              │
+│  典型模板：                                                  │
+│  [一句话总结] + [知识结构图/思维导图] + [课后挑战题]        │
+└────────────────────────────────────────────────────────────┘
+```
+
+#### 5.2.3 理科新增 slideType
+
+| slideType | 说明 | 关键字段 |
+|-----------|------|---------|
+| `problem` | 问题引入页 | `question`, `scenario`, `imagePrompt` |
+| `concept` | 概念讲解页 | `formula`, `diagramType`, `keyPoints` |
+| `exercise` | 例题演练页 | `exampleProblem`, `solution`, `variants[]` |
+| `derivation` | 推导/证明页 | `stepByStep[]`, `formula` |
+
+#### 5.2.4 理科准确性保障机制
+
+```java
+// AIEnrichmentService.enrichChapters() 中新增校验逻辑
+public class AccuracyValidator {
+    // 1. 公式必须包含单位
+    // 2. 数学推导每步必须有逻辑依据
+    // 3. 化学方程式必须配平
+    // 4. 物理单位必须统一（SI制）
+    // 5. 数值答案必须带有效数字
+}
+```
+
+**AIEnrichmentService 理科模式提示词片段**：
+
+```
+【准确性要求 - 理科专属】
+- 公式必须写完整，包含所有符号和单位，不得使用"↑↓"省略
+- 化学方程式必须配平，电荷守恒
+- 数学证明每步必须有依据，不能跳步
+- 所有数据必须标注来源和测量条件
+- 例题答案必须给出完整解题过程，不得只给结果
+- 严禁：口语化类比替代正式定义（如"电子很小"→应写"电子半径约2.8×10⁻¹⁵m"）
+- 允许：生活现象引入 + 可视化动画描述原理
+
+【问题驱动四步法 - 必须执行】
+Step 1 问题引入：用一个可操作的生活问题/实验现象引入（≤3行文字）
+Step 2 概念讲解：揭示核心原理/公式，配合概念图（严禁跳步）
+Step 3 例题演练：典型例题→分步解答→变式训练（题目必须有完整解答）
+Step 4 总结提升：一句话核心结论 + 知识结构图 + 课后思考题
+```
+
+#### 5.2.5 文科模式提示词片段
+
+```
+【趣味性要求 - 文科专属】
+- 优先使用故事线：人物经历/历史事件/文学案例
+- 允许文学化表达和情感共鸣设计
+- 名人名言占比可提高至10%
+- 漫画/插图用于情感共鸣，不强制要求每页都有
+- 允许适当的比喻和拟人（但定义仍需严谨）
+```
+
+#### 5.2.6 通用提示词设计
 
 **每个 Chapter 调用一次 LLM**，输入课程上下文 + Chapter 元数据：
 
@@ -209,6 +317,8 @@ public interface AIEnrichmentService {
 你的核心理念：减少文字，增加视觉。每张幻灯片只传达一个核心信息。
 擅长使用信息图、知识漫画、流程图、对比图来代替大段文字描述。
 善于设计趣味性的学习路径：通过故事线、案例、思考题激发学生兴趣。
+科目类型：{subjectType}（文科/理科，由调用方传入）
+科目：{courseTitle}
 
 【章节信息】
 - 课程标题：{courseTitle}
@@ -314,6 +424,10 @@ public interface AIEnrichmentService {
 
 ### 5.3 幻灯片类型覆盖（增强版）
 
+> **文字密度控制**：视觉型幻灯片（infographic + diagram + comic + concept）占比 ≥ 55%，纯文字型（text + reflection）≤ 20%。
+
+#### 5.3.1 通用类型
+
 | 顺序 | slideType | 说明 | 占比 | 视觉来源 |
 |------|-----------|------|------|---------|
 | 1 | infographic | 知识结构可视化 | 25% | baoyu-infographic |
@@ -326,7 +440,15 @@ public interface AIEnrichmentService {
 | 8 | activity | 课堂互动活动 | 5% | 步骤图示 |
 | 9 | timeline | 历史/发展时间线 | 5% | PptxGenJS |
 
-**文字密度控制**：infographic + diagram + comic 三类视觉型幻灯片占比 ≥ 55%，纯文字型（text + reflection）≤ 20%。
+#### 5.3.2 理科专属类型
+
+| 顺序 | slideType | 说明 | 占比 | 出现位置 |
+|------|-----------|------|------|---------|
+| R1 | problem | 问题引入页 | 每章 1 次 | 章节第 1 张 |
+| R2 | concept | 概念/公式讲解页 | 每章 2-4 次 | 四步法第 2 步 |
+| R3 | derivation | 推导/证明页 | 数学/物理必选 | 四步法第 2 步 |
+| R4 | exercise | 例题+变式题演练 | 每章 2-3 次 | 四步法第 3 步 |
+| R5 | summary | 章节总结 | 每章 1 次 | 四步法第 4 步 |
 
 ---
 
@@ -437,6 +559,11 @@ PptBuildService.buildPptRequest()
 
 | slideType | JS 函数 | 布局特点 | 视觉来源 |
 |-----------|---------|---------|---------|
+| problem | `createProblemSlide()` | 大字问题居中 + 生活场景图 | PptxGenJS |
+| concept | `createConceptSlide()` | 公式突出 + 概念图 + 要点 | PptxGenJS |
+| derivation | `createDerivationSlide()` | 分步推导，每步一行，逻辑清晰 | PptxGenJS |
+| exercise | `createExerciseSlide()` | 例题→解答→变式题三段式 | PptxGenJS |
+| summary | `createSummarySlide()` | 一句话+知识结构图+思考题 | PptxGenJS |
 | infographic | `createInfographicSlide()` | 知识图谱/卡片网格/中心发散 | baoyu-infographic |
 | comic | `createComicSlide()` | 2-4格漫画 + 旁白 | baoyu-comic |
 | diagram | `createDiagramSlide()` | 流程图/对比/时间线 | PptxGenJS |
@@ -449,7 +576,6 @@ PptBuildService.buildPptRequest()
 | text | `createTextSlide()` | 标题 + 正文 + 要点（控制行数） | PptxGenJS |
 | title | `createTitleSlide()` | （已有）封面 | PptxGenJS |
 | chapter | `createChapterSlide()` | （已有）章节封面 | PptxGenJS |
-| summary | `createSummarySlide()` | （已有）章节小结 | PptxGenJS |
 | end | `createEndSlide()` | （已有）结束页 | PptxGenJS |
 
 ---
@@ -464,7 +590,8 @@ Authorization: Bearer {token}
 Request:
 {
   "courseId": 1,               // 必填：关联课程
-  "template": "elegant",       // 可选：default | elegant | minimal | vibrant | academic
+  "subjectType": "science",   // 新增：science（理科）| humanities（文科）
+  "template": "elegant",       // 可选：default | elegant | minimal | vibrant | academic | hand-drawn-edu | chalkboard | kawaii | corporate-memphis
   "style": "academic",         // 可选：academic(学术) | vivid(生动) | concise(精炼)
   "includeQuiz": true,          // 可选：是否包含测验页（默认 true）
   "includeActivity": true,     // 可选：是否包含活动页（默认 true）
@@ -540,12 +667,15 @@ const TEMPLATES = {
 | 受众 | 学科 | 推荐模板 |
 |------|------|---------|
 | 小学生 | 任意 | `kawaii` + `hand-drawn-edu` |
-| 初中生 | 任意 | `vibrant` + `hand-drawn-edu` |
+| 初中生 | 理科（数学/物理/化学） | `hand-drawn-edu` + `academic` |
+| 初中生 | 文科 | `vibrant` + `hand-drawn-edu` |
 | 高中生 | 理科 | `academic` + `elegant` |
 | 高中生 | 文科 | `elegant` + `minimal` |
-| 大学生 | 任意 | `academic` + `minimal` |
+| 大学生 | 理科 | `academic` + `minimal` |
+| 大学生 | 文科 | `minimal` + `elegant` |
 | 成人/培训 | 任意 | `corporate-memphis` + `default` |
-| 互动课堂 | 任意 | `chalkboard` |
+| 互动课堂 | 理科（物理/化学实验） | `chalkboard`（模拟实验室黑板氛围） |
+| 互动课堂 | 文科 | `chalkboard` |
 
 ---
 
