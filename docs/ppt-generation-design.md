@@ -38,6 +38,8 @@ PptGenerationService (Java)
 | 8 | 模板仅有 4 套（蓝/绿/白/橙），风格雷同 | 审美疲劳 |
 | 9 | 教学元素（漫画/信息图/流程动画）缺失 | 趣味性不足 |
 | 10 | 知识点堆砌，无知识结构可视化 | 学习路径不清晰 |
+| 11 | **没有互动性设计**，整堂课单向灌输 | 学生参与度低、注意力易涣散 |
+| 12 | 老师无法实时了解学生掌握情况 | 教学效果无法评估 |
 
 ---
 
@@ -51,6 +53,7 @@ PPT 内容经 AI 二次处理，每张幻灯片包含足够的教学文字、视
 - **生动性**：用图表、信息图、流程动画代替大段文字
 - **格式多样化**：多种模板 + 多种教学幻灯片类型
 - **减少文字密度**：每张幻灯片不超过 3 行文字，以视觉元素承载信息
+- **强互动性**：每节课设计 3-5 个师生互动节点（提问/投票/讨论/实验），实时反馈学习效果
 
 ---
 
@@ -98,7 +101,7 @@ PPT 内容经 AI 二次处理，每张幻灯片包含足够的教学文字、视
 @Data
 @Builder
 public class SlideContent {
-    private String slideType;    // text | diagram | case | quote | quiz | activity | reflection | comic | infographic | timeline | problem | concept | exercise | derivation
+    private String slideType;    // text | diagram | case | quote | quiz | activity | reflection | comic | infographic | timeline | problem | concept | exercise | derivation | vote | poll | quick-fire | experiment | game | exit-ticket | result-viz
     private String title;         // 幻灯片标题
     private String mainBody;      // 主要阐述文字（100-300字）
     private List<String> bullets; // 要点列表
@@ -149,7 +152,7 @@ public class PptGenerationResult {
 
 ```java
 public static class SlideData {
-    private String type;    // 新增: text|diagram|case|quote|quiz|activity|reflection|comic|infographic|timeline|problem|concept|exercise|derivation
+    private String type;    // 新增: text|diagram|case|quote|quiz|activity|reflection|comic|infographic|timeline|problem|concept|exercise|derivation|vote|poll|quick-fire|experiment|game|exit-ticket|result-viz
     private String title;
     private String content;
     private List<String> contentList;
@@ -452,6 +455,134 @@ Step 4 总结提升：一句话核心结论 + 知识结构图 + 课后思考题
 
 ---
 
+
+### 5.X 互动性设计体系
+
+> 老师的 PPT 不是"演讲稿"，而是"教学工具"。每节课必须在关键节点设计师生互动，让学生的注意力始终跟着老师的节奏走。
+
+#### 5.X.1 互动性设计原则
+
+| 原则 | 说明 | 实施要求 |
+|------|------|---------|
+| **每课至少 3 个互动节点** | 导入、概念讲解后、练习后必须各有 1 次 | AIEnrichmentService 生成时强制插入 |
+| **互动形式匹配教学内容** | 投票→概念辨析；讨论→开放性问题；练习→知识检测 | 由 slideType 决定互动类型 |
+| **结果即时反馈** | 互动结果必须可视化（柱状图/词云）展示给学生 | 依赖后端实时推送能力 |
+| **老师有"暂停权"** | 互动幻灯片上有"老师控制"按钮，老师决定何时开始 | 前端/PPT 交互层支持 |
+| **分层互动** | 简单题→全班投票；开放题→小组讨论；难题→个人思考后展示 | AI 提示词按难度分配互动类型 |
+
+#### 5.X.2 互动节点类型分类
+
+| 互动类型 | slideType | 触发时机 | 持续时间 | 后端依赖 |
+|---------|-----------|---------|---------|---------|
+| `vote` 课堂投票 | 全班选择 A/B/C/D | 概念辨析后 | 1-2min | 实时结果聚合 |
+| `poll` 快速统计 | 全班选择程度/感受 | 课程中段 | 30s | 实时结果聚合 |
+| `think-pair-share` 思考配对分享 | 个人思考→同桌讨论→全班 | 开放性问题后 | 3-5min | 无（课堂组织） |
+| `quick-fire` 快速问答 | 学生举手/抢答 | 知识回忆阶段 | 1min | 无 |
+| `experiment` 分组实验 | 动手操作→观察记录 | 物理/化学/生物 | 10-15min | 实验记录 |
+| `game` 知识游戏 | 竞赛/PK 形式 | 复习课 | 5-10min | 计分系统 |
+| `exit-ticket` 出门票 | 回答 1 个问题后离开 | 课程结尾 | 2min | 结果收集 |
+
+#### 5.X.3 互动幻灯片 JS 渲染函数
+
+| slideType | JS 函数 | 布局特点 |
+|-----------|---------|---------|
+| `vote` | `createVoteSlide()` | 大字题目居中 + A/B/C/D 选项卡片，选项带颜色 |
+| `poll` | `createPollSlide()` | 标题 + 滑动条/程度选择条 |
+| `quick-fire` | `createQuickFireSlide()` | 倒计时 + 大字问题 + 抢答提示 |
+| `experiment` | `createExperimentSlide()` | 实验步骤图 + 记录表格占位 |
+| `game` | `createGameSlide()` | 分数板 + 题目卡片 + 计时器占位 |
+| `exit-ticket` | `createExitTicketSlide()` | 问题 + 空白回答区 |
+
+#### 5.X.4 实时反馈机制（后端设计）
+
+**架构**：
+
+```
+老师 PPT 端（投影屏幕）
+    │
+    │ WebSocket 连接（roomId = 课堂ID）
+    ▼
+┌──────────────────────────────────────────┐
+│  InteractionService (Java WebSocket)      │
+│                                           │
+│  每种互动类型有独立处理器：               │
+│  - VoteHandler    → 聚合选项计数         │
+│  - PollHandler    → 聚合程度分布          │
+│  - QuickFireHandler → 记录抢答时间       │
+│  - ExitTicketHandler → 收集答题结果       │
+│                                           │
+│  推送结果给老师端 + 学生端（可选）        │
+└──────────────────────────────────────────┘
+    │
+    │ 结果数据（JSON）
+    ▼
+老师端：实时显示柱状图/统计结果
+学生端：显示个人提交状态/正确答案
+```
+
+**后端核心接口**：
+
+```java
+// 发起互动
+@MessageMapping("/interaction/start")
+public void startInteraction(InteractionRequest req) {
+    // 创建互动房间，广播开始信号
+}
+
+// 学生提交回答
+@MessageMapping("/interaction/submit")
+public void submitAnswer(AnswerSubmission submission) {
+    // 聚合答案，实时计算统计结果
+}
+
+// 获取实时结果（轮询备选）
+@GetMapping("/api/interaction/{interactionId}/results")
+public ApiResponse<InteractionResult> getResults(String interactionId) {
+    // 返回当前聚合结果
+}
+```
+
+**结果展示幻灯片类型**：`result-viz`（柱状图/饼图/词云）
+
+```javascript
+function createResultVizSlide() {
+    // 接收实时数据，渲染柱状图/饼图
+    // 显示正确答案高亮 + 全班正确率
+}
+```
+
+#### 5.X.5 互动性 × 学科适配
+
+| 学科 | 推荐互动类型 | 理由 |
+|------|------------|------|
+| 数学 | vote（概念辨析）、quick-fire（公式记忆）、exit-ticket | 数学需要即时验证理解 |
+| 物理 | experiment、vote（判断对错）、think-pair-share | 物理需要观察和讨论 |
+| 化学 | experiment、poll（安全程度）、game | 化学需要实验操作 |
+| 历史 | think-pair-share、poll（态度选择）、exit-ticket | 历史适合开放讨论 |
+| 语文 | think-pair-share、game（背诵PK）、exit-ticket | 语文需要表达和积累 |
+
+#### 5.X.6 AI 提示词中的互动设计指令
+
+AIEnrichmentService 在生成章节幻灯片时，必须在叙事弧中嵌入互动节点：
+
+```
+【互动设计要求】
+在设计章节叙事弧时，必须在以下三个位置各插入至少1个互动节点：
+1. 导入环节（开场问题之后）：插入 vote 或 poll（检验预习效果）
+2. 概念讲解后（揭示原理之后）：插入 quick-fire 或 think-pair-share（检验即时理解）
+3. 练习结束后（变式题之后）：插入 exit-ticket 或 game（检验知识掌握）
+
+【互动节点格式】
+每个互动节点必须包含：
+- "interactionType": "vote | poll | quick-fire | experiment | think-pair-share | game | exit-ticket"
+- "triggerMoment": "概念讲解后" | "练习结束后" | "课程导入时"
+- "question": "互动的问题内容"
+- "expectedDuration": 2  // 分钟
+- "teacherNote": "老师操作提示（如：点击开始投票）"
+```
+
+---
+
 ## 6. 现有 Skill 整合策略
 
 ### 6.1 baoyu-infographic — 图表/信息图生成
@@ -597,6 +728,8 @@ Request:
   "includeActivity": true,     // 可选：是否包含活动页（默认 true）
   "includeComic": true,         // 新增：是否包含知识漫画（默认 true）
   "includeInfographic": true,  // 新增：是否包含信息图（默认 true）
+  "includeInteraction": true,   // 新增：是否包含互动节点（默认 true）
+  "interactionDensity": "normal", // 新增：互动密度 low|normal|high
   "slidesPerChapter": 5,       // 可选：每章幻灯片数量（默认 4-6 自动）
   "artStyle": "hand-drawn-edu" // 新增：美术风格（默认 hand-drawn-edu）
 }
@@ -674,7 +807,7 @@ const TEMPLATES = {
 | 大学生 | 理科 | `academic` + `minimal` |
 | 大学生 | 文科 | `minimal` + `elegant` |
 | 成人/培训 | 任意 | `corporate-memphis` + `default` |
-| 互动课堂 | 理科（物理/化学实验） | `chalkboard`（模拟实验室黑板氛围） |
+| 互动课堂 | 任意 | `chalkboard` + 互动组件（投票条/计时器/计分板） |
 | 互动课堂 | 文科 | `chalkboard` |
 
 ---
