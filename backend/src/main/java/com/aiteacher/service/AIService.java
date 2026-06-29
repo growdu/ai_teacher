@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -99,8 +100,8 @@ public class AIService {
     /**
      * Send chat request to a specific LLM provider by name.
      * Falls back to best available provider if the named one is not found or disabled.
+     * Note: No CircuitBreaker here — the actual provider's chat() call is wrapped instead.
      */
-    @CircuitBreaker(name = "aiProvider", fallbackMethod = "chatResponseFallback")
     public ChatResponse chat(ChatRequest request, String modelName) {
         LLMProvider provider = null;
         if (modelName != null && !modelName.isEmpty()) {
@@ -131,43 +132,56 @@ public class AIService {
         if (name == null) return null;
         String normalized = name.trim();
 
-        // Direct map of common aliases
-        String mapped = MODEL_NAME_ALIASES.get(normalized.toLowerCase());
-        if (mapped != null) normalized = mapped;
+        // Try registry's findLLMProvider first (case-insensitive key match, no alias)
+        LLMProvider provider = providerRegistry.findLLMProvider(normalized);
+        if (provider != null) return provider;
 
-        // Try display name match first
+        // Normalize via aliases only if direct key lookup failed
+        String mapped = MODEL_NAME_ALIASES.get(normalized.toLowerCase());
+        if (mapped != null) {
+            provider = providerRegistry.findLLMProvider(mapped);
+            if (provider != null) return provider;
+        }
+
+        // Try display name match
         for (LLMProvider p : providerRegistry.getLLMProviders()) {
             if (p.getProviderName().equalsIgnoreCase(normalized)) {
                 return p;
             }
         }
-        // Try by ProviderType enum name
-        try {
-            ProviderType type = ProviderType.valueOf(normalized);
-            for (LLMProvider p : providerRegistry.getLLMProviders()) {
-                if (p.getProviderType() == type) {
-                    return p;
-                }
+        // Try ProviderType enum name (case-insensitive)
+        for (LLMProvider p : providerRegistry.getLLMProviders()) {
+            if (p.getProviderType().name().equalsIgnoreCase(normalized)) {
+                return p;
             }
-        } catch (IllegalArgumentException ignored) {}
+        }
         return null;
     }
 
-    private static final Map<String, String> MODEL_NAME_ALIASES = Map.of(
-            "minimax", "MiniMax",
-            "openai", "OpenAI",
-            "claude", "Claude",
-            "qwen", "Qwen",
-            "deepseek", "DeepSeek",
-            "doubao", "Doubao",
-            "kimi", "Kimi",
-            "zhipu", "Zhipu",
-            "ernie", "Ernie",
-            "abab", "ABAB"
-    );
+    private static final Map<String, String> MODEL_NAME_ALIASES;
+    static {
+        MODEL_NAME_ALIASES = new HashMap<>();
+        MODEL_NAME_ALIASES.put("minimax", "MiniMax");
+        MODEL_NAME_ALIASES.put("openai", "OpenAI");
+        MODEL_NAME_ALIASES.put("claude", "Claude");
+        MODEL_NAME_ALIASES.put("qwen", "Qwen");
+        MODEL_NAME_ALIASES.put("deepseek", "DeepSeek");
+        MODEL_NAME_ALIASES.put("doubao", "Doubao");
+        MODEL_NAME_ALIASES.put("kimi", "Kimi");
+        MODEL_NAME_ALIASES.put("zhipu", "Zhipu");
+        MODEL_NAME_ALIASES.put("ernie", "Ernie");
+        MODEL_NAME_ALIASES.put("abab", "ABAB");
+        MODEL_NAME_ALIASES.put("mock", "Mock LLM");
+        MODEL_NAME_ALIASES.put("mock-llm", "Mock LLM");
+    }
 
     public ChatResponse chatResponseFallback(ChatRequest request, Throwable t) {
         log.warn("AI chat circuit breaker triggered: {}", t.getMessage());
+        throw new RuntimeException("AI服务暂时不可用，请稍后再试。");
+    }
+
+    public ChatResponse chatResponseFallback(ChatRequest request, String modelName, Throwable t) {
+        log.warn("AI chat (model={}) circuit breaker triggered: {}", modelName, t.getMessage());
         throw new RuntimeException("AI服务暂时不可用，请稍后再试。");
     }
 

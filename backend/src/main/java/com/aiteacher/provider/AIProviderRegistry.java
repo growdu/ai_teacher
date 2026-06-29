@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -75,6 +76,25 @@ public class AIProviderRegistry {
      */
     public LLMProvider getLLMProvider(String name) {
         return llmProviders.get(name);
+    }
+
+    /**
+     * Find LLM provider by name (case-insensitive key match + enabled check).
+     * Tries: exact key → case-insensitive key → display name → type name.
+     */
+    public LLMProvider findLLMProvider(String name) {
+        if (name == null) return null;
+        // exact key
+        LLMProvider p = llmProviders.get(name);
+        if (p != null && p.isEnabled()) return p;
+        // case-insensitive key
+        String lower = name.toLowerCase();
+        for (Map.Entry<String, LLMProvider> e : llmProviders.entrySet()) {
+            if (e.getKey().toLowerCase().equals(lower) && e.getValue().isEnabled()) {
+                return e.getValue();
+            }
+        }
+        return null;
     }
 
     /**
