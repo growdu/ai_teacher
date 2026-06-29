@@ -1,5 +1,6 @@
 package com.aiteacher.config;
 
+import com.aiteacher.config.TenantContext;
 import com.aiteacher.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -94,13 +95,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter implements App
 
                     authentication.setDetails(userId);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    TenantContext.setUserId(userId);
+                    TenantContext.setTenantId(jwtService.getTenantIdFromToken(token));
                 }
             } catch (Exception e) {
                 logger.error("JWT validation failed", e);
             }
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     private void addCorsHeaders(HttpServletRequest request, HttpServletResponse response) {

@@ -28,3 +28,9 @@ Thumbs.db
 
 # Docker
 *.pid
+
+# Environment — NEVER commit .env (contains API keys and secrets)
+.env
+.env.local
+.env.production
+.env.*.local

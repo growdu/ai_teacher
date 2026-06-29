@@ -16,6 +16,8 @@ public class TeachingMaterial {
     
     private Long courseId;
     
+    private Long knowledgePointId;
+    
     private String materialType;
     
     private String title;

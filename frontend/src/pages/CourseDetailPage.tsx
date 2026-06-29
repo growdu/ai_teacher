@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Card, Button, Tag, Spin, message, Space, Modal,
-  Breadcrumb, Descriptions, Empty, Tooltip, Divider, Collapse
+  Breadcrumb, Descriptions, Empty, Tooltip, Divider, Collapse, Row, Col
 } from 'antd'
 import {
   ArrowLeftOutlined, FileTextOutlined, VideoCameraOutlined,
   CheckCircleOutlined, ClockCircleOutlined, SyncOutlined,
-  CalendarOutlined, BookOutlined, ThunderboltOutlined, EditOutlined
+  CalendarOutlined, BookOutlined, ThunderboltOutlined, EditOutlined,
+  EyeOutlined, DownloadOutlined, FolderOutlined
 } from '@ant-design/icons'
 import request from '@/api/request'
+import { userStore } from '@/store/userStore'
 
 interface Course {
   id: number
@@ -19,6 +21,18 @@ interface Course {
   createdAt: string
   outline?: any
   script?: string
+}
+
+interface Material {
+  id: number
+  courseId: number
+  knowledgePointId?: number
+  materialType: string
+  title: string
+  fileUrl: string
+  fileSize: number
+  status: string
+  createdAt: string
 }
 
 interface Chapter {
@@ -45,9 +59,21 @@ const CourseDetailPage = () => {
   const [videoScript, setVideoScript] = useState('')
   const [generatingVideo, setGeneratingVideo] = useState(false)
 
+  // 素材
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [materialsLoading, setMaterialsLoading] = useState(false)
+
+  // 预览
+  const [previewVisible, setPreviewVisible] = useState(false)
+  const [previewType, setPreviewType] = useState<'video' | 'ppt'>('ppt')
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [pdfSrc, setPdfSrc] = useState('')
+
   useEffect(() => {
     if (!id) return
     loadCourse(+id)
+    loadMaterials(+id)
   }, [id])
 
   const loadCourse = async (courseId: number) => {
@@ -69,14 +95,27 @@ const CourseDetailPage = () => {
         }
       } else {
         message.error(res?.message || '加载失败')
-        navigate('/courses')
+        navigate('/app/courses')
       }
     } catch {
       message.error('加载课程详情失败')
-      navigate('/courses')
+      navigate('/app/courses')
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadMaterials = async (courseId: number) => {
+    setMaterialsLoading(true)
+    try {
+      const res = await request.get('/material/list', { params: { courseId } }) as any
+      const list: Material[] = res?.data || res || []
+      setMaterials(list.map((m: any) => ({
+        ...m,
+        knowledgePointId: m.knowledgePointId ?? m.knowledge_point_id ?? undefined,
+      })))
+    } catch { /* ignore */ }
+    finally { setMaterialsLoading(false) }
   }
 
   const handleGenerateVideo = async () => {
@@ -89,12 +128,49 @@ const CourseDetailPage = () => {
       })
       message.success('视频生成任务已创建')
       setVideoModalVisible(false)
-      navigate('/tasks')
+      navigate('/app/tasks')
     } catch (e: any) {
       message.error(e?.response?.data?.message || '视频生成失败')
     } finally {
       setGeneratingVideo(false)
     }
+  }
+
+  const toProxyUrl = (fileUrl: string) => {
+    if (!fileUrl) return ''
+    return window.location.origin + fileUrl.replace('http://minio:9000/ai-teacher/', '/minio/ai-teacher/')
+  }
+
+  const handlePreview = (material: Material) => {
+    const url = toProxyUrl(material.fileUrl)
+    setPreviewUrl(url)
+    setPreviewType(material.materialType === 'video' ? 'video' : 'ppt')
+    setPreviewVisible(true)
+  }
+
+  // PPT预览 PDF加载
+  useEffect(() => {
+    if (!previewVisible || previewType !== 'ppt' || !previewUrl) return
+    setPreviewLoading(true)
+    setPdfSrc('')
+    const objectName = previewUrl.replace(/.*\/minio\/ai-teacher\//, '')
+    const apiUrl = `/api/ppt/preview?objectName=${encodeURIComponent(objectName)}`
+    const token = userStore.getState().token
+    if (!token) { setPreviewLoading(false); return }
+    fetch(apiUrl, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob() })
+      .then(blob => {
+        setPdfSrc(URL.createObjectURL(blob))
+        setPreviewLoading(false)
+      })
+      .catch(() => { message.error('PPT预览加载失败'); setPreviewLoading(false) })
+    return () => { if (pdfSrc) URL.revokeObjectURL(pdfSrc) }
+  }, [previewVisible, previewUrl, previewType])
+
+  const formatSize = (size: number) => {
+    if (!size) return '-'
+    if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
+    return (size / (1024 * 1024)).toFixed(1) + ' MB'
   }
 
   if (loading) {
@@ -115,27 +191,83 @@ const CourseDetailPage = () => {
   }
   const sc = statusConfig[course.status] || statusConfig.draft
 
+  const pptMaterials = materials.filter(m => m.materialType === 'ppt')
+  const videoMaterials = materials.filter(m => m.materialType === 'video')
+
+  const renderMaterialBadge = (m: Material) => {
+    const isReady = m.status === 'generated' && m.fileUrl
+    return (
+      <Card
+        key={m.id}
+        size="small"
+        className="hover:shadow-md transition-shadow"
+        styles={{ body: { padding: 12 } }}
+        actions={[
+          <Tooltip title="预览" key="preview">
+            {isReady
+              ? <EyeOutlined onClick={() => handlePreview(m)} />
+              : <span className="text-gray-300 cursor-not-allowed"><EyeOutlined /></span>
+            }
+          </Tooltip>,
+          <Tooltip title="下载" key="download">
+            {m.fileUrl
+              ? <DownloadOutlined onClick={() => window.open(toProxyUrl(m.fileUrl), '_blank')} />
+              : <span className="text-gray-300 cursor-not-allowed"><DownloadOutlined /></span>
+            }
+          </Tooltip>,
+        ]}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            style={{
+              background: m.materialType === 'video'
+                ? 'linear-gradient(135deg, #1e3a5f, #0f2744)'
+                : 'linear-gradient(135deg, #fa8c16, #d97706)',
+            }}
+          >
+            {m.materialType === 'video'
+              ? <VideoCameraOutlined className="text-white text-lg" />
+              : <FileTextOutlined className="text-white text-lg" />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-gray-800 text-sm truncate">{m.title || '未命名'}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <Tag color={m.materialType === 'video' ? 'blue' : 'orange'} className="text-xs">
+                {m.materialType === 'video' ? '视频' : 'PPT'}
+              </Tag>
+              <span className="text-gray-400 text-xs">{formatSize(m.fileSize)}</span>
+              <span className="text-gray-300 text-xs">·</span>
+              <span className="text-gray-400 text-xs">{m.createdAt?.substring(0, 10)}</span>
+            </div>
+          </div>
+          {m.status === 'generated' && m.fileUrl && (
+            <Tag color="green" className="text-xs shrink-0">
+              <CheckCircleOutlined /> 可用
+            </Tag>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-5">
       {/* Breadcrumb */}
       <Breadcrumb
         items={[
-          { title: <a onClick={() => navigate('/')}>首页</a> },
-          { title: <a onClick={() => navigate('/courses')}>课程管理</a> },
+          { title: <a onClick={() => navigate('/app')}>首页</a> },
+          { title: <a onClick={() => navigate('/app/courses')}>课程管理</a> },
           { title: course.title || '课程详情' },
         ]}
       />
 
       {/* Header Card */}
-      <Card
-        className="shadow-sm"
-        styles={{ body: { padding: 0 } }}
-      >
+      <Card className="shadow-sm" styles={{ body: { padding: 0 } }}>
         <div
           className="h-36 relative flex items-center px-8"
-          style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          }}
+          style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
         >
           <div className="absolute inset-0 opacity-10"
             style={{
@@ -193,6 +325,67 @@ const CourseDetailPage = () => {
             </Descriptions.Item>
           </Descriptions>
         </div>
+      </Card>
+
+      {/* 课程素材 */}
+      <Card
+        title={
+          <span className="text-lg font-semibold flex items-center gap-2">
+            <FolderOutlined className="text-indigo-500" />
+            课程素材
+            {materials.length > 0 && <Tag color="purple" className="text-xs">{materials.length}个文件</Tag>}
+          </span>
+        }
+        className="shadow-sm"
+        extra={
+          <Button
+            type="primary"
+            icon={<FileTextOutlined />}
+            size="small"
+            onClick={() => navigate('/app/materials')}
+          >
+            教材中心
+          </Button>
+        }
+      >
+        {materialsLoading ? (
+          <div className="text-center py-8"><Spin size="small" /></div>
+        ) : materials.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <FolderOutlined className="text-3xl mb-2 block" />
+            <p className="text-sm">暂无课程素材，生成PPT或视频后将显示在这里</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* PPT素材 */}
+            {pptMaterials.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <FileTextOutlined className="text-orange-500" />
+                  <span className="text-sm font-medium text-gray-600">PPT课件</span>
+                  <Tag color="orange" className="text-xs">{pptMaterials.length}</Tag>
+                </div>
+                <div className="space-y-2">
+                  {pptMaterials.map(m => renderMaterialBadge(m))}
+                </div>
+              </div>
+            )}
+            {/* 视频素材 */}
+            {videoMaterials.length > 0 && (
+              <div>
+                {pptMaterials.length > 0 && <Divider className="my-3" />}
+                <div className="flex items-center gap-2 mb-2">
+                  <VideoCameraOutlined className="text-blue-500" />
+                  <span className="text-sm font-medium text-gray-600">教学视频</span>
+                  <Tag color="blue" className="text-xs">{videoMaterials.length}</Tag>
+                </div>
+                <div className="space-y-2">
+                  {videoMaterials.map(m => renderMaterialBadge(m))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Course Outline */}
@@ -297,7 +490,7 @@ const CourseDetailPage = () => {
 
       {/* Back button */}
       <div className="flex justify-start">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/courses')} size="large">
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/app/courses')} size="large">
           返回课程列表
         </Button>
       </div>
@@ -339,6 +532,63 @@ const CourseDetailPage = () => {
               开始生成视频
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Preview Modal */}
+      <Modal
+        title={
+          <span className="flex items-center gap-2">
+            {previewType === 'video'
+              ? <VideoCameraOutlined style={{ color: '#1890ff' }} />
+              : <FileTextOutlined style={{ color: '#fa8c16' }} />
+            }
+            {previewType === 'video' ? '视频预览' : 'PPT预览'}
+          </span>
+        }
+        open={previewVisible}
+        onCancel={() => setPreviewVisible(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button icon={<DownloadOutlined />} onClick={() => window.open(previewUrl, '_blank')}>
+              下载{previewType === 'video' ? '视频' : 'PPT'}
+            </Button>
+            <Button onClick={() => setPreviewVisible(false)}>关闭</Button>
+          </div>
+        }
+        width={previewType === 'video' ? 680 : 900}
+        destroyOnClose
+      >
+        <div style={{ marginTop: 16 }}>
+          {previewType === 'video' ? (
+            <video
+              src={previewUrl}
+              controls
+              autoPlay
+              style={{
+                width: '100%', maxHeight: '60vh', borderRadius: 12,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.15)', background: '#000',
+              }}
+            />
+          ) : (
+            <div style={{ background: '#1e1e1e', borderRadius: 12, overflow: 'hidden', minHeight: 480, position: 'relative' }}>
+              {previewLoading && (
+                <div style={{
+                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#1e1e1e', zIndex: 1, color: '#aaa', fontSize: 14, gap: 12,
+                }}>
+                  <span>正在转换 PPT，请稍候...</span>
+                </div>
+              )}
+              <iframe
+                key={pdfSrc || 'empty'}
+                id="ppt-preview-iframe"
+                title="PPT Preview"
+                src={pdfSrc}
+                style={{ width: '100%', height: 600, border: 'none', display: 'block' }}
+              />
+            </div>
+          )}
         </div>
       </Modal>
     </div>

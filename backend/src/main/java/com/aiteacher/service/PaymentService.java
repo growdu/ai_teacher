@@ -437,4 +437,57 @@ public class PaymentService {
             return false;
         }
     }
+
+    /**
+     * 验证支付宝异步回调签名
+     * @param params 所有回调参数（包含 sign 字段）
+     * @return true 如果验签通过
+     */
+    public boolean verifyAlipayCallback(Map<String, String> params) {
+        if (!paymentConfig.isVerifyAlipaySign()) {
+            log.warn("Alipay sign verification is disabled, skipping");
+            return true;
+        }
+        if (paymentConfig.getAlipayPublicKey() == null || paymentConfig.getAlipayPublicKey().isEmpty()) {
+            log.warn("Alipay public key not configured, skipping verification");
+            return true;
+        }
+        try {
+            String sign = params.get("sign");
+            String signType = params.get("sign_type");
+            if (sign == null || sign.isEmpty()) {
+                log.warn("Alipay callback missing sign");
+                return false;
+            }
+            // Build sign string: all params except sign and sign_type, sorted by key
+            StringBuilder sb = new StringBuilder();
+            params.entrySet().stream()
+                .filter(e -> !"sign".equals(e.getKey()) && !"sign_type".equals(e.getKey()))
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> {
+                    if (sb.length() > 0) sb.append("&");
+                    sb.append(e.getKey()).append("=").append(e.getValue());
+                });
+            String signData = sb.toString();
+            return verifyRSA2(signData, sign, paymentConfig.getAlipayPublicKey());
+        } catch (Exception e) {
+            log.error("Alipay sign verification error: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean verifyRSA2(String data, String signature, String publicKey) {
+        try {
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            PublicKey key = kf.generatePublic(new java.security.spec.X509EncodedKeySpec(
+                    Base64.getDecoder().decode(publicKey)));
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initVerify(key);
+            sig.update(data.getBytes(StandardCharsets.UTF_8));
+            return sig.verify(Base64.getDecoder().decode(signature));
+        } catch (Exception e) {
+            log.error("RSA2 verification failed: {}", e.getMessage());
+            return false;
+        }
+    }
 }

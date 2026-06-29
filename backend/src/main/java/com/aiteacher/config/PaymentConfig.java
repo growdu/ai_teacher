@@ -32,4 +32,11 @@ public class PaymentConfig {
     private boolean enabled = false;
     private String environment = "production"; // "production" or "sandbox"
     private boolean sandboxEnabled = false; // alias for environment=sandbox
+
+    // ========== Signature Verification ==========
+    // WeChat platform certificate (apiclient_cert.pem) for callback verification
+    private String wechatPlatformCert;
+    // Alipay callback sign verification switch (enable once real keys are configured)
+    private boolean verifyAlipaySign = true;
+    private boolean verifyWechatSign = true;
 }

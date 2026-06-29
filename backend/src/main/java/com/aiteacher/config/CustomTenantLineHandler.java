@@ -28,13 +28,8 @@ public class CustomTenantLineHandler implements com.baomidou.mybatisplus.extensi
     @Override
     public boolean ignoreTable(String tableName) {
         // Tables without tenant_id column — do NOT add tenant filter
+        // All other tables with tenant_id MUST be filtered to prevent cross-tenant data leaks
         return "tenant".equals(tableName)
-            || "users".equals(tableName) || "user".equals(tableName)
-            || "course".equals(tableName) || "teaching_material".equals(tableName)
-            || "knowledge_point".equals(tableName) || "workspace".equals(tableName)
-            || "resource".equals(tableName) || "ai_config".equals(tableName)
-            || "async_task".equals(tableName)
-            || "plan".equals(tableName) || "subscription".equals(tableName)
-            || "api_usage".equals(tableName) || "payment".equals(tableName);
+            || "plan".equals(tableName);
     }
 }

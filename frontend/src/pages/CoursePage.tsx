@@ -45,6 +45,7 @@ const CoursePage = () => {
   const [pptTemplateModal, setPptTemplateModal] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null)
   const [pptTemplate, setPptTemplate] = useState('default')
+  const [pptForm] = Form.useForm()
   const [form] = Form.useForm()
   const navigate = useNavigate()
 
@@ -94,18 +95,48 @@ const CoursePage = () => {
     if (!selectedCourseId) return
     setGenerating(true)
     try {
+      const values = await pptForm.validateFields()
       const res = await request.post('/material/ppt/generate', {
         courseId: selectedCourseId,
         template: pptTemplate,
+        keywords: values.keywords || undefined,
+        goals: values.goals || undefined,
+        targetAudience: values.targetAudience || undefined,
+        additionalNotes: values.additionalNotes || undefined,
       }) as any
       if (res && res.code === 200) {
-        message.success('PPT生成成功')
+        const data = res.data || {}
+        const totalSlides = data.totalSlides
+        const totalDuration = data.totalDuration
+        const chapters = data.chapters || []
+        const slideCountByType: Record<string, number> = {}
+        chapters.forEach((ch: any) => {
+          ;(ch.slides || []).forEach((s: any) => {
+            slideCountByType[s.type] = (slideCountByType[s.type] || 0) + 1
+          })
+        })
+        const typeStats = Object.entries(slideCountByType)
+          .map(([t, c]) => `${t}×${c}`)
+          .join(' | ')
+
+        message.success({
+          content: (
+            <span>
+              PPT生成成功
+              {totalSlides && <span className="ml-3 text-sm opacity-80">📊 {totalSlides}页 | ⏱ {totalDuration}分钟{chapters.length ? ` | 📑 ${chapters.length}章节` : ''}</span>}
+              {typeStats && <div className="text-xs mt-0.5 opacity-70">{typeStats}</div>}
+            </span>
+          ),
+        })
         setPptTemplateModal(false)
+        pptForm.resetFields()
         loadData()
       } else {
         message.error(res?.message || 'PPT生成失败')
       }
-    } catch { message.error('PPT生成失败') }
+    } catch (error: any) {
+      if (!error.errorFields) message.error(error?.message || 'PPT生成失败')
+    }
     finally { setGenerating(false) }
   }
 
@@ -210,7 +241,7 @@ const CoursePage = () => {
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={
             <span className="text-gray-400">还没有课程，请先添加知识点再创建课程</span>
           }>
-            <Button type="primary" onClick={() => navigate('/knowledge')}>去添加知识点</Button>
+            <Button type="primary" onClick={() => navigate('/app/knowledge')}>去添加知识点</Button>
           </Empty>
         </Card>
       ) : (
@@ -328,41 +359,77 @@ const CoursePage = () => {
 
       {/* PPT Template Modal */}
       <Modal
-        title={<span className="text-lg font-semibold">🎨 选择PPT模板</span>}
+        title={<span className="text-lg font-semibold">🎨 生成PPT课件</span>}
         open={pptTemplateModal}
         onOk={handleGeneratePpt}
         confirmLoading={generating}
-        onCancel={() => setPptTemplateModal(false)}
-        width={560}
+        onCancel={() => { setPptTemplateModal(false); pptForm.resetFields() }}
+        width={600}
         destroyOnClose
         okText="开始生成"
       >
-        <div className="py-4 space-y-3">
-          <p className="text-gray-500 text-sm mb-4">选择配色风格，AI将生成对应风格的PPT课件：</p>
-          {PPT_TEMPLATES.map(t => (
-            <div
-              key={t.value}
-              onClick={() => setPptTemplate(t.value)}
-              className={`cursor-pointer rounded-xl border-2 p-4 flex items-center gap-4 transition-all ${
-                pptTemplate === t.value
-                  ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                  : 'border-gray-100 bg-white hover:border-indigo-200 hover:shadow-sm'
-              }`}
-            >
-              <div
-                className={`w-14 h-14 rounded-xl ${t.bg} flex items-center justify-center text-2xl shadow-sm`}
-              >
-                {t.icon}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-800">{t.label}</div>
-                <div className="text-sm text-gray-400 mt-0.5">{t.desc}</div>
-              </div>
-              {pptTemplate === t.value && (
-                <CheckCircleOutlined className="text-indigo-500 text-xl" />
-              )}
+        <div className="py-4 space-y-4">
+          {/* 模板选择 */}
+          <div>
+            <p className="text-gray-500 text-sm mb-3 font-medium">配色风格</p>
+            <div className="grid grid-cols-2 gap-3">
+              {PPT_TEMPLATES.map(t => (
+                <div
+                  key={t.value}
+                  onClick={() => setPptTemplate(t.value)}
+                  className={`cursor-pointer rounded-xl border-2 p-3 flex items-center gap-3 transition-all ${
+                    pptTemplate === t.value
+                      ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                      : 'border-gray-100 bg-white hover:border-indigo-200 hover:shadow-sm'
+                  }`}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-lg ${t.bg} flex items-center justify-center text-xl shadow-sm flex-shrink-0`}
+                  >
+                    {t.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-800 text-sm">{t.label}</div>
+                    <div className="text-xs text-gray-400 mt-0.5 line-clamp-1">{t.desc}</div>
+                  </div>
+                  {pptTemplate === t.value && (
+                    <CheckCircleOutlined className="text-indigo-500 text-lg flex-shrink-0" />
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* 用户输入区域 */}
+          <Form form={pptForm} layout="vertical" size="small">
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+              <p className="text-gray-500 text-sm mb-3 font-medium">📝 自定义内容要求（可选）</p>
+              <Form.Item name="keywords" label="关键字">
+                <Input placeholder="例如：三角函数、图像变换、历年真题" />
+              </Form.Item>
+              <Form.Item name="goals" label="学习目标">
+                <Select allowClear placeholder="选择本节课的核心目标">
+                  <Select.Option value="概念理解">概念理解</Select.Option>
+                  <Select.Option value="解题技巧">解题技巧</Select.Option>
+                  <Select.Option value="考试复习">考试复习</Select.Option>
+                  <Select.Option value="兴趣引导">兴趣引导</Select.Option>
+                  <Select.Option value="综合应用">综合应用</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="targetAudience" label="目标受众">
+                <Select allowClear placeholder="AI将据此调整内容深浅">
+                  <Select.Option value="小学生">小学生</Select.Option>
+                  <Select.Option value="初中生">初中生</Select.Option>
+                  <Select.Option value="高中生">高中生</Select.Option>
+                  <Select.Option value="大学生">大学生</Select.Option>
+                  <Select.Option value="成人">成人</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="additionalNotes" label="补充说明">
+                <Input.TextArea placeholder="例如：需要联系生活实际、加强互动设计、侧重公式推导..." rows={2} />
+              </Form.Item>
+            </div>
+          </Form>
         </div>
       </Modal>
     </div>

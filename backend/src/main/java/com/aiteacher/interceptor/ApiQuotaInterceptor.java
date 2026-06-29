@@ -92,14 +92,14 @@ public class ApiQuotaInterceptor implements HandlerInterceptor {
         }
 
         // 检查订阅状态
-        if (!"ACTIVE".equals(subscription.getStatus())) {
+        if (!"active".equals(subscription.getStatus())) {
             throw new BusinessException(403, "订阅状态异常，请联系客服");
         }
 
         // 检查订阅是否过期
         if (subscription.getExpiresAt() != null && 
             subscription.getExpiresAt().isBefore(LocalDateTime.now())) {
-            subscription.setStatus("EXPIRED");
+            subscription.setStatus("expired");
             throw new BusinessException(403, "订阅已过期，请续订后继续使用");
         }
 

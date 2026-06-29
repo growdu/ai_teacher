@@ -26,7 +26,7 @@ const Login = () => {
         avatar: ''
       })
       message.success('登录成功')
-      navigate('/')
+      navigate('/app')
     } catch (error) {
       message.error('登录失败，请检查用户名和密码')
     } finally {

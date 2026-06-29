@@ -49,7 +49,7 @@ const Register = () => {
         avatar: ''
       })
       message.success('注册成功')
-      navigate('/')
+      navigate('/app')
     } catch (error: any) {
       const errorMsg = error?.response?.data?.message || '注册失败，请重试'
       message.error(errorMsg)

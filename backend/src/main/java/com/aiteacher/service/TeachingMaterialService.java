@@ -37,4 +37,8 @@ public class TeachingMaterialService {
     public boolean updateById(TeachingMaterial material) {
         return teachingMaterialMapper.updateById(material) > 0;
     }
+
+    public boolean deleteById(Long id) {
+        return teachingMaterialMapper.deleteById(id) > 0;
+    }
 }

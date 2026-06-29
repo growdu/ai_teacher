@@ -46,7 +46,7 @@ public class PptPreviewService {
             // Download PPT from MinIO to temp file
             Path pptPath = Path.of(cacheDir, "input_" + System.currentTimeMillis() + getExtension(objectName));
             Files.createDirectories(Path.of(cacheDir));
-            byte[] pptBytes = fileStorageService.getFileBytes(objectName);
+            byte[] pptBytes = getFileBytesWithFallback(objectName);
             Files.write(pptPath, pptBytes);
 
             // Output PDF path
@@ -147,5 +147,34 @@ public class PptPreviewService {
     private String getExtension(String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         return lastDot >= 0 ? fileName.substring(lastDot) : "";
+    }
+
+    /**
+     * Fetch file bytes from MinIO with fallback to direct HTTP access.
+     * MinIO SDK may fail with newer server versions (2025+) due to AWS4 signing changes.
+     */
+    private byte[] getFileBytesWithFallback(String objectName) throws Exception {
+        try {
+            return fileStorageService.getFileBytes(objectName);
+        } catch (Exception sdkError) {
+            log.warn("MinIO SDK fetch failed (server may require updated signing): {}, trying direct HTTP fallback", sdkError.getMessage());
+            String minioUrl = "http://minio:9000/" + objectName;
+            java.net.URL url = new java.net.URL(minioUrl);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(30000);
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException("HTTP fetch failed with status: " + conn.getResponseCode());
+            }
+            try (java.io.InputStream in = conn.getInputStream();
+                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = in.read(buffer)) > 0) out.write(buffer, 0, len);
+                log.info("Direct HTTP fetch succeeded: {} bytes", out.size());
+                return out.toByteArray();
+            }
+        }
     }
 }

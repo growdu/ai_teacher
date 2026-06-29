@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -23,6 +22,9 @@ public class SecurityConfig {
 
     @Value("${spring.profiles.active:prod}")
     private String activeProfile;
+
+    @Value("${cors.allowed-origins:}")
+    private String corsAllowedOrigins;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
@@ -69,10 +71,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+
+        System.out.println("[CORS DEBUG] SecurityConfig.corsConfigurationSource() called");
+        System.out.println("[CORS DEBUG] corsAllowedOrigins from @Value: " + corsAllowedOrigins);
+        System.out.println("[CORS DEBUG] CORS_ALLOWED_ORIGINS env: " + System.getenv("CORS_ALLOWED_ORIGINS"));
+
+        // Allow all origins for preflight OPTIONS — this is the simplest fix for CORS 403
+        // Spring Security's CorsFilter processes preflight before any auth rules apply
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

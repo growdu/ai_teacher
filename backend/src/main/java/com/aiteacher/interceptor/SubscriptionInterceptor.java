@@ -126,8 +126,8 @@ public class SubscriptionInterceptor implements HandlerInterceptor {
             throw new BusinessException(403, "此功能需要订阅后才能使用，请先选择订阅计划");
         }
 
-        if (!"ACTIVE".equals(subscription.getStatus())) {
-            String msg = "EXPIRED".equals(subscription.getStatus()) || "CANCELLED".equals(subscription.getStatus())
+        if (!"active".equals(subscription.getStatus())) {
+            String msg = "expired".equals(subscription.getStatus()) || "cancelled".equals(subscription.getStatus())
                 ? "订阅已过期，请续费后继续使用"
                 : "订阅状态异常，请联系客服";
             throw new BusinessException(403, msg);

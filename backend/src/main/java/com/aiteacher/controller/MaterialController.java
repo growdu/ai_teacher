@@ -30,7 +30,10 @@ public class MaterialController {
     private TeachingMaterialService teachingMaterialService;
 
     /**
-     * Generate PPT from course
+     * Generate PPT from course or from keywords
+     *
+     * Mode A (byCourse):  generationMode=byCourse, courseId required
+     * Mode B (byKeywords): generationMode=byKeywords, knowledgePointId required
      */
     @PostMapping("/ppt/generate")
     public R<Object> generatePpt(@RequestBody PptGenerateRequest request) {
@@ -38,10 +41,31 @@ public class MaterialController {
         if (userId == null) {
             throw new com.aiteacher.exception.BusinessException(401, "未授权");
         }
-        TeachingMaterial material = pptGenerationService.generatePpt(request.getCourseId(), request.getTemplate(), userId);
+
+        PptGenerationService.PptGenerationResult result;
+        if ("byKeywords".equals(request.getGenerationMode())) {
+            // Mode B: generate from knowledge point + user keywords
+            if (request.getKnowledgePointId() == null) {
+                throw new com.aiteacher.exception.BusinessException(400, "请选择知识点");
+            }
+            result = pptGenerationService.generatePptFromKeywords(request, userId);
+        } else {
+            // Mode A (default / backward compatible): generate from course outline
+            if (request.getCourseId() == null) {
+                throw new com.aiteacher.exception.BusinessException(400, "请选择课程");
+            }
+            result = pptGenerationService.generatePpt(request.getCourseId(), request.getTemplate(), userId, request.getModelName());
+        }
+
+        TeachingMaterial material = result.getMaterial();
+
         return R.ok(Map.of(
                 "materialId", material.getId(),
-                "fileUrl", material.getFileUrl()
+                "fileUrl", material.getFileUrl(),
+                "totalSlides", result.getTotalSlides(),
+                "totalDuration", result.getTotalDuration(),
+                "assetUrls", result.getAssetUrls() != null ? result.getAssetUrls() : java.util.Collections.emptyList(),
+                "chapters", result.getChapters() != null ? result.getChapters() : java.util.Collections.emptyList()
         ));
     }
 
@@ -79,6 +103,7 @@ public class MaterialController {
     @GetMapping("/list")
     public R<List<TeachingMaterial>> list(
             @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) Long knowledgePointId,
             @RequestParam(required = false) String materialType) {
         Long tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
@@ -87,6 +112,7 @@ public class MaterialController {
         LambdaQueryWrapper<TeachingMaterial> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TeachingMaterial::getTenantId, tenantId);
         if (courseId != null) wrapper.eq(TeachingMaterial::getCourseId, courseId);
+        if (knowledgePointId != null) wrapper.eq(TeachingMaterial::getKnowledgePointId, knowledgePointId);
         if (materialType != null) wrapper.eq(TeachingMaterial::getMaterialType, materialType);
         wrapper.orderByDesc(TeachingMaterial::getCreatedAt);
         return R.ok(teachingMaterialService.list(wrapper));
@@ -99,6 +125,7 @@ public class MaterialController {
     public R<Page<TeachingMaterial>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) Long knowledgePointId,
             @RequestParam(required = false) String materialType) {
         Long tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
@@ -107,6 +134,7 @@ public class MaterialController {
         Page<TeachingMaterial> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<TeachingMaterial> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TeachingMaterial::getTenantId, tenantId);
+        if (knowledgePointId != null) wrapper.eq(TeachingMaterial::getKnowledgePointId, knowledgePointId);
         if (materialType != null) wrapper.eq(TeachingMaterial::getMaterialType, materialType);
         wrapper.orderByDesc(TeachingMaterial::getCreatedAt);
         return R.ok(teachingMaterialService.page(page, wrapper));
@@ -118,5 +146,14 @@ public class MaterialController {
     @GetMapping("/{id}")
     public R<TeachingMaterial> getById(@PathVariable Long id) {
         return R.ok(teachingMaterialService.getById(id));
+    }
+
+    /**
+     * Delete material by ID
+     */
+    @DeleteMapping("/{id}")
+    public R<Void> deleteById(@PathVariable Long id) {
+        boolean ok = teachingMaterialService.deleteById(id);
+        return ok ? R.ok((Void) null) : R.fail("删除失败");
     }
 }

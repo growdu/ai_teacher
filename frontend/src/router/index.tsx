@@ -14,6 +14,7 @@ import PricingPage from '@/pages/PricingPage'
 import LandingPage from '@/pages/LandingPage'
 import TasksPage from '@/pages/TasksPage'
 import WorkspacePage from '@/pages/WorkspacePage'
+import NotFound from '@/pages/NotFound'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token } = useUserStore()
@@ -26,6 +27,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const router = createBrowserRouter([
   {
     path: '/',
+    element: <LandingPage />,
+  },
+  {
+    path: '/app',
     element: (
       <ProtectedRoute>
         <Layout />
@@ -81,6 +86,10 @@ const router = createBrowserRouter([
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '*',
+    element: <NotFound />,
   },
 ])
 

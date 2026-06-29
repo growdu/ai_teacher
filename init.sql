@@ -186,6 +186,10 @@ CREATE TABLE IF NOT EXISTS api_usage (
     year_month VARCHAR(7) NOT NULL,
     call_count INT NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW(),
+    provider_name VARCHAR(50) DEFAULT 'default',
+    model VARCHAR(100) DEFAULT 'default',
+    api_type VARCHAR(50) DEFAULT 'chat',
     CONSTRAINT fk_api_usage_tenant FOREIGN KEY (tenant_id) REFERENCES tenant(id),
     CONSTRAINT uk_api_usage_tenant_month UNIQUE (tenant_id, year_month)
 );

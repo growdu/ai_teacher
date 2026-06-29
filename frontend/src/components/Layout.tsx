@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Layout, Menu, Avatar, Dropdown, Button, Space, Tooltip, Badge } from 'antd'
 import {
   UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
@@ -16,9 +16,23 @@ const { Header, Sider, Content } = Layout
 
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useUserStore()
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+      if (window.innerWidth < 768) {
+        setCollapsed(true)
+      }
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const menuItems: MenuProps['items'] = [
     // 主导航
@@ -28,27 +42,27 @@ const AppLayout = () => {
       label: '内容管理',
       children: [
         {
-          key: '/',
+          key: '/app',
           icon: <HomeOutlined />,
           label: '首页仪表盘',
         },
         {
-          key: '/knowledge',
+          key: '/app/knowledge',
           icon: <ExperimentOutlined />,
           label: '知识点管理',
         },
         {
-          key: '/courses',
+          key: '/app/courses',
           icon: <BookOutlined />,
           label: '课程管理',
         },
         {
-          key: '/materials',
+          key: '/app/materials',
           icon: <FolderOutlined />,
           label: '教材中心',
         },
         {
-          key: '/quiz',
+          key: '/app/quiz',
           icon: <FileTextOutlined />,
           label: '测验管理',
         },
@@ -61,12 +75,12 @@ const AppLayout = () => {
       label: '辅助工具',
       children: [
         {
-          key: '/tasks',
+          key: '/app/tasks',
           icon: <ThunderboltOutlined />,
           label: '任务中心',
         },
         {
-          key: '/workspace',
+          key: '/app/workspace',
           icon: <VideoCameraOutlined />,
           label: '工作空间',
         },
@@ -79,12 +93,12 @@ const AppLayout = () => {
       label: '系统',
       children: [
         {
-          key: '/settings',
+          key: '/app/settings',
           icon: <SettingOutlined />,
           label: '设置',
         },
         {
-          key: '/pricing',
+          key: '/app/pricing',
           icon: <CrownOutlined />,
           label: '订阅套餐',
         },
@@ -98,7 +112,7 @@ const AppLayout = () => {
         key: 'profile',
         icon: <UserOutlined />,
         label: '个人资料',
-        onClick: () => navigate('/settings'),
+        onClick: () => navigate('/app/settings'),
       },
       { type: 'divider' },
       {
@@ -117,12 +131,23 @@ const AppLayout = () => {
 
   return (
     <Layout className="min-h-screen">
+      {/* Mobile Overlay */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <Sider
         trigger={null}
         collapsible
-        collapsed={collapsed}
+        collapsed={isMobile ? true : collapsed}
+        collapsedWidth={isMobile ? 0 : 80}
         width={220}
-        className="shadow-xl"
+        className={`shadow-xl fixed h-screen z-50 transition-all duration-300 ${
+          isMobile ? (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : ''
+        }`}
         style={{
           background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
         }}
@@ -134,7 +159,7 @@ const AppLayout = () => {
             borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          {collapsed ? (
+          {isMobile || collapsed ? (
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg">
               AI
             </div>
@@ -156,44 +181,61 @@ const AppLayout = () => {
           mode="inline"
           selectedKeys={[location.pathname]}
           items={menuItems}
-          onClick={handleMenuClick}
+          onClick={({ key }) => {
+            handleMenuClick({ key })
+            if (isMobile) setMobileMenuOpen(false)
+          }}
           style={{
             background: 'transparent',
             borderRight: 'none',
           }}
           className="custom-menu"
+          inlineCollapsed={isMobile ? false : collapsed}
         />
       </Sider>
 
-      <Layout>
+      <Layout className={isMobile ? '' : (collapsed ? 'ml-[80px]' : 'ml-[220px]')}>
         {/* Header */}
         <Header
-          className="bg-white flex items-center justify-between shadow-sm px-6"
+          className="bg-white flex items-center justify-between shadow-sm px-4 md:px-6"
           style={{
             height: 64,
             borderBottom: '1px solid #f0f0f0',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
           }}
         >
           <div className="flex items-center">
-            <Button
-              type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-              className="text-base"
-              style={{ width: 48, height: 48 }}
-            />
-            <span className="text-gray-300 text-xl ml-2">|</span>
-            <span className="ml-4 text-gray-500 text-sm">
-              {location.pathname === '/' && '首页仪表盘'}
-              {location.pathname === '/knowledge' && '知识点管理'}
-              {location.pathname === '/courses' && '课程管理'}
-              {location.pathname === '/materials' && '教材中心'}
-              {location.pathname === '/quiz' && '测验管理'}
-              {location.pathname === '/tasks' && '任务中心'}
-              {location.pathname === '/workspace' && '工作空间'}
-              {location.pathname === '/settings' && '设置'}
-              {location.pathname === '/pricing' && '订阅套餐'}
-              {location.pathname.startsWith('/course/') && '课程详情'}
+            {isMobile ? (
+              <Button
+                type="text"
+                icon={<MenuUnfoldOutlined />}
+                onClick={() => setMobileMenuOpen(true)}
+                className="text-base"
+                style={{ width: 48, height: 48 }}
+              />
+            ) : (
+              <Button
+                type="text"
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => setCollapsed(!collapsed)}
+                className="text-base"
+                style={{ width: 48, height: 48 }}
+              />
+            )}
+            <span className="text-gray-300 text-xl ml-2 hidden sm:block">|</span>
+            <span className="ml-2 md:ml-4 text-gray-500 text-sm">
+              {location.pathname === '/app' && '首页仪表盘'}
+              {location.pathname === '/app/knowledge' && '知识点管理'}
+              {location.pathname === '/app/courses' && '课程管理'}
+              {location.pathname === '/app/materials' && '教材中心'}
+              {location.pathname === '/app/quiz' && '测验管理'}
+              {location.pathname === '/app/tasks' && '任务中心'}
+              {location.pathname === '/app/workspace' && '工作空间'}
+              {location.pathname === '/app/settings' && '设置'}
+              {location.pathname === '/app/pricing' && '订阅套餐'}
+              {location.pathname.startsWith('/app/course/') && '课程详情'}
             </span>
           </div>
 

@@ -26,7 +26,7 @@ public class MiniMaxLLMProvider extends AbstractLLMProvider {
         this.baseUrl = baseUrl != null ? baseUrl : "https://api.minimax.chat/v1";
         this.model = model != null ? model : "MiniMax-Text-01";
         this.enabled = true;
-        this.priority = 8;
+        this.priority = 12;
         this.webClient = WebClient.builder()
                 .baseUrl(this.baseUrl)
                 .defaultHeaders(headers -> {
@@ -83,9 +83,10 @@ public class MiniMaxLLMProvider extends AbstractLLMProvider {
         if (request.getTemperature() != null) {
             body.put("temperature", request.getTemperature());
         }
-        if (request.getMaxTokens() != null) {
-            body.put("tokens_to_generate", request.getMaxTokens());
-        }
+        // Always set tokens_to_generate to avoid MiniMax default truncation (default ~8192 tokens
+        // is often insufficient for 27+ slide JSON responses). Use maxTokens from request, or 32000.
+        int tokens = request.getMaxTokens() != null ? request.getMaxTokens() : 32000;
+        body.put("tokens_to_generate", tokens);
 
         return body;
     }

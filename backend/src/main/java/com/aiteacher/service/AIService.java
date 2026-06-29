@@ -1,6 +1,7 @@
 package com.aiteacher.service;
 
 import com.aiteacher.provider.AIProviderRegistry;
+import com.aiteacher.provider.ai.model.ProviderType;
 import com.aiteacher.provider.llm.LLMProvider;
 import com.aiteacher.provider.tts.TTSProvider;
 import com.aiteacher.provider.ai.ChatRequest;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -93,6 +95,76 @@ public class AIService {
 
         return provider.chat(request);
     }
+
+    /**
+     * Send chat request to a specific LLM provider by name.
+     * Falls back to best available provider if the named one is not found or disabled.
+     */
+    @CircuitBreaker(name = "aiProvider", fallbackMethod = "chatResponseFallback")
+    public ChatResponse chat(ChatRequest request, String modelName) {
+        LLMProvider provider = null;
+        if (modelName != null && !modelName.isEmpty()) {
+            // Try to find the named provider first
+            provider = findLLMProviderByName(modelName);
+            if (provider != null && provider.isEnabled()) {
+                log.info("Routing chat request to specified model: {}", modelName);
+            } else {
+                log.warn("Specified model '{}' not found or disabled, falling back to best available", modelName);
+                provider = providerRegistry.getBestLLMProvider();
+            }
+        } else {
+            provider = providerRegistry.getBestLLMProvider();
+        }
+
+        if (provider == null) {
+            throw new RuntimeException("No LLM provider available");
+        }
+
+        return provider.chat(request);
+    }
+
+    /**
+     * Find LLM provider by display name (case-insensitive).
+     * Checks ProviderType.displayName or provider's own getProviderName().
+     */
+    private LLMProvider findLLMProviderByName(String name) {
+        if (name == null) return null;
+        String normalized = name.trim();
+
+        // Direct map of common aliases
+        String mapped = MODEL_NAME_ALIASES.get(normalized.toLowerCase());
+        if (mapped != null) normalized = mapped;
+
+        // Try display name match first
+        for (LLMProvider p : providerRegistry.getLLMProviders()) {
+            if (p.getProviderName().equalsIgnoreCase(normalized)) {
+                return p;
+            }
+        }
+        // Try by ProviderType enum name
+        try {
+            ProviderType type = ProviderType.valueOf(normalized);
+            for (LLMProvider p : providerRegistry.getLLMProviders()) {
+                if (p.getProviderType() == type) {
+                    return p;
+                }
+            }
+        } catch (IllegalArgumentException ignored) {}
+        return null;
+    }
+
+    private static final Map<String, String> MODEL_NAME_ALIASES = Map.of(
+            "minimax", "MiniMax",
+            "openai", "OpenAI",
+            "claude", "Claude",
+            "qwen", "Qwen",
+            "deepseek", "DeepSeek",
+            "doubao", "Doubao",
+            "kimi", "Kimi",
+            "zhipu", "Zhipu",
+            "ernie", "Ernie",
+            "abab", "ABAB"
+    );
 
     public ChatResponse chatResponseFallback(ChatRequest request, Throwable t) {
         log.warn("AI chat circuit breaker triggered: {}", t.getMessage());

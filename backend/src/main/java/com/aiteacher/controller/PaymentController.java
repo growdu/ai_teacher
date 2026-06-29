@@ -2,6 +2,7 @@ package com.aiteacher.controller;
 
 import com.aiteacher.common.R;
 import com.aiteacher.config.TenantContext;
+import com.aiteacher.config.PaymentConfig;
 import com.aiteacher.entity.Plan;
 import com.aiteacher.entity.Subscription;
 import com.aiteacher.mapper.PlanMapper;
@@ -33,6 +34,9 @@ public class PaymentController {
 
     @Autowired
     private PlanMapper planMapper;
+
+    @Autowired
+    private PaymentConfig paymentConfig;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -92,7 +96,11 @@ public class PaymentController {
     public String alipayCallback(@RequestParam Map<String, String> params) {
         try {
             log.info("Alipay callback received: {}", params);
-            // In production, verify Alipay signature here using alipayPublicKey
+            // Verify signature before processing
+            if (!paymentService.verifyAlipayCallback(params)) {
+                log.error("Alipay callback signature verification FAILED");
+                return "failure";
+            }
             String outTradeNo = params.get("out_trade_no");
             String tradeStatus = params.get("trade_status");
             if (outTradeNo != null && ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus))) {
@@ -116,8 +124,13 @@ public class PaymentController {
             @RequestBody String body) {
         try {
             log.info("WeChat Pay callback received, body: {}", body);
-            // In production, verify WeChat Pay signature
-            // paymentService.verifyWechatCallback(body, signature, timestamp, nonce);
+            // Verify signature before processing
+            if (paymentConfig.isVerifyWechatSign() && signature != null && timestamp != null && nonce != null) {
+                if (!paymentService.verifyWechatCallback(body, signature, timestamp, nonce)) {
+                    log.error("WeChat callback signature verification FAILED");
+                    return "failure";
+                }
+            }
 
             // Parse tradeNo from callback body
             JsonNode node = objectMapper.readTree(body);

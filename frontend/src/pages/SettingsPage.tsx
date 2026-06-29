@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Tabs, Card, Table, Button, Tag, Space, Modal, Form, Input, Switch, Select, message, Popconfirm } from 'antd'
 import { PlusOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import request from '@/api/request'
+import { useUserStore } from '@/store/userStore'
 
 interface AiConfig {
   id: number
@@ -12,12 +13,27 @@ interface AiConfig {
   createdAt: string
 }
 
+interface UserProfile {
+  id: number
+  username: string
+  email: string
+  phone?: string
+  avatar?: string
+}
+
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('ai')
   const [aiConfigs, setAiConfigs] = useState<AiConfig[]>([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [form] = Form.useForm()
+  const [profileForm] = Form.useForm()
+  const [passwordForm] = Form.useForm()
+
+  // Profile state
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
+  const { user, setUser } = useUserStore()
 
   const columns = [
     {
@@ -131,9 +147,70 @@ const SettingsPage = () => {
     }
   }
 
+  // Load user profile
+  const loadProfile = async () => {
+    setProfileLoading(true)
+    try {
+      const res = await request.get('/user/profile')
+      if (res.data) {
+        const profileData: UserProfile = res.data
+        profileForm.setFieldsValue({
+          username: profileData.username,
+          email: profileData.email,
+          phone: profileData.phone || '',
+          avatar: profileData.avatar || '',
+        })
+      }
+    } catch (error) {
+      message.error('加载个人信息失败')
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
+  // Save profile handler
+  const handleSaveProfile = async () => {
+    try {
+      const values = await profileForm.validateFields()
+      await request.put('/user/profile', values)
+      message.success('保存成功')
+      // Update user store with new info
+      if (user) {
+        setUser({
+          ...user,
+          username: values.username,
+          email: values.email,
+        })
+      }
+      // Reload profile to ensure data is fresh
+      loadProfile()
+    } catch (error: any) {
+      message.error(error?.message || '保存失败')
+    }
+  }
+
+  // Change password handler
+  const handleChangePassword = async () => {
+    try {
+      const values = await passwordForm.validateFields()
+      // Only send oldPassword and newPassword to backend
+      await request.put('/user/password', {
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+      })
+      message.success('密码修改成功')
+      setPasswordModalVisible(false)
+      passwordForm.resetFields()
+    } catch (error: any) {
+      message.error(error?.message || '密码修改失败')
+    }
+  }
+
   useEffect(() => {
     if (activeTab === 'ai') {
       loadAiConfigs()
+    } else if (activeTab === 'profile') {
+      loadProfile()
     }
   }, [activeTab])
 
@@ -166,18 +243,45 @@ const SettingsPage = () => {
       label: '个人信息',
       children: (
         <Card title="个人信息设置">
-          <Form layout="vertical">
-            <Form.Item label="用户名">
+          <Form form={profileForm} layout="vertical">
+            <Form.Item
+              label="用户名"
+              name="username"
+              rules={[{ required: true, message: '请输入用户名' }]}
+            >
               <Input placeholder="输入用户名" />
             </Form.Item>
-            <Form.Item label="邮箱">
+            <Form.Item
+              label="邮箱"
+              name="email"
+              rules={[
+                { required: true, message: '请输入邮箱' },
+                { type: 'email', message: '请输入有效的邮箱地址' }
+              ]}
+            >
               <Input placeholder="输入邮箱" />
             </Form.Item>
-            <Form.Item label="头像">
-              <Input placeholder="头像URL" />
+            <Form.Item
+              label="手机号"
+              name="phone"
+            >
+              <Input placeholder="输入手机号（可选）" />
+            </Form.Item>
+            <Form.Item
+              label="头像"
+              name="avatar"
+            >
+              <Input placeholder="头像URL（可选）" />
             </Form.Item>
             <Form.Item>
-              <Button type="primary">保存</Button>
+              <Space>
+                <Button type="primary" onClick={handleSaveProfile} loading={profileLoading}>
+                  保存修改
+                </Button>
+                <Button onClick={() => setPasswordModalVisible(true)}>
+                  更换密码
+                </Button>
+              </Space>
             </Form.Item>
           </Form>
         </Card>
@@ -261,6 +365,56 @@ const SettingsPage = () => {
           </Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked" initialValue={true}>
             <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Password Change Modal */}
+      <Modal
+        title="更换密码"
+        open={passwordModalVisible}
+        onOk={handleChangePassword}
+        onCancel={() => {
+          setPasswordModalVisible(false)
+          passwordForm.resetFields()
+        }}
+        width={400}
+      >
+        <Form form={passwordForm} layout="vertical">
+          <Form.Item
+            name="oldPassword"
+            label="旧密码"
+            rules={[{ required: true, message: '请输入旧密码' }]}
+          >
+            <Input.Password placeholder="输入旧密码" />
+          </Form.Item>
+          <Form.Item
+            name="newPassword"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '新密码长度不能少于6位' }
+            ]}
+          >
+            <Input.Password placeholder="输入新密码" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="确认新密码"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请确认新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="再次输入新密码" />
           </Form.Item>
         </Form>
       </Modal>
